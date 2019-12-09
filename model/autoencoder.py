@@ -62,7 +62,7 @@ class Autoencoder(SavableModule):
 
             nn.ConvTranspose3d(in_channels = 1 * amcm, out_channels = 1, kernel_size = 4, stride = 2, padding = 1)
         )
-        self.cuda()
+        # self.cuda()
 
     def encode(self, x, return_mean_and_log_variance = False):
         x = x.reshape((-1, 1, 32, 32, 32))

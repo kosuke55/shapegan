@@ -13,6 +13,15 @@ import sys
 from model.sdf_net import SDFNet, LATENT_CODE_SIZE, LATENT_CODES_FILENAME
 from util import device
 
+
+labels = torch.zeros(65, dtype=torch.int64)
+for i in range(30):
+    labels[i] = 1
+for i in range(30,65):
+    labels[i] = 2
+torch.save(labels, "data/labels.to")
+
+
 from dataset import dataset
 dataset.load_labels(device=device)
 dataset.rescale_sdf = False
@@ -99,8 +108,8 @@ def train():
         score = sdf_net.get_inception_score(latent_variance = variance)
         epoch_duration = time.time() - epoch_start_time
         
-        print("Epoch {:d}, {:.1f}s. Loss: {:.8f}, Inception score: {:.4}".format(epoch, epoch_duration, np.mean(loss_values), score))
-
+        #print("Epoch {:d}, {:.1f}s. Loss: {:.8f}, Inception score: {:.4}".format(epoch, epoch_duration, np.mean(loss_values), score))
+        print(epoch, epoch_duration, np.mean(loss_values), score)
         sdf_net.save()
         torch.save(latent_codes, LATENT_CODES_FILENAME)
         

@@ -48,7 +48,7 @@ class SDFNet(SavableModule):
             nn.Tanh()
         )
 
-        self.cuda()
+        # self.cuda()
 
     def forward(self, points, latent_codes):
         input = torch.cat((points, latent_codes), dim=1)

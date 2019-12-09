@@ -17,7 +17,7 @@ class PointcloudClassifier(SavableModule):
         self.fully_connected_2 = Linear(512, 256)
         self.fully_connected_3 = Linear(256, dataset.label_count)
 
-        self.cuda()
+        # self.cuda()
 
     def forward(self, points):
         batch = torch.zeros(points.shape[0], device=points.device, dtype=torch.int64)

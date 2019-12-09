@@ -23,7 +23,7 @@ class Generator(SavableModule):
         )
 
         self.inception_score_latent_codes = dict()
-        self.cuda()
+        # self.cuda()
 
     def forward(self, x):
         x = x.reshape((-1, LATENT_CODE_SIZE, 1, 1, 1))
@@ -69,7 +69,7 @@ class Discriminator(SavableModule):
             Lambda(lambda x: torch.sigmoid(x) if self.use_sigmoid else x)
         )
 
-        self.cuda()
+        # self.cuda()
 
     def forward(self, x):
         if (len(x.shape) < 5):

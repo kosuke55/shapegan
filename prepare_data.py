@@ -6,14 +6,14 @@ from sdf.mesh_to_sdf import MeshSDF, scale_to_unit_sphere, BadMeshException
 from util import ensure_directory
 from multiprocessing import Pool
 
-DIRECTORY_MODELS = 'data/meshes/'
-MODEL_EXTENSION = '.obj'
+DIRECTORY_MODELS = 'data/primates/'
+MODEL_EXTENSION = '.ply'
 DIRECTORY_SDF = 'data/sdf/'
 
-CREATE_VOXELS = True
+CREATE_VOXELS = False
 VOXEL_RESOLUTION = 32
 
-CREATE_SDF_CLOUDS = False
+CREATE_SDF_CLOUDS = True
 SDF_CLOUD_SAMPLE_SIZE = 200000
 
 def get_model_files():
@@ -31,6 +31,9 @@ def get_voxel_filename(model_filename):
 def get_sdf_cloud_filename(model_filename):
     return get_npy_filename(model_filename, '-sdf')
 
+def get_sdf_cloud_dirname(model_filename):
+    return os.path.dirname(model_filename)
+
 def get_bad_mesh_filename(model_filename):
     return DIRECTORY_SDF + model_filename[len(DIRECTORY_MODELS):-len(MODEL_EXTENSION)] + '.badmesh'
 
@@ -45,21 +48,29 @@ def is_bad_mesh(model_filename):
 def process_model_file(filename):
     voxels_filename = get_voxel_filename(filename)
     sdf_cloud_filename = get_sdf_cloud_filename(filename)
+    sdf_cloud_dirname = get_sdf_cloud_dirname(sdf_cloud_filename)
+    print("filename1: ", filename)
+    print("sdf_cloud_filename1: ", sdf_cloud_filename)
+    print("sdf_cloud_dirname1: ", sdf_cloud_dirname)
 
     if is_bad_mesh(filename):
+        print("filename2: ",filename)
         return
     if not (CREATE_VOXELS and not os.path.isfile(voxels_filename) or CREATE_SDF_CLOUDS and not os.path.isfile(sdf_cloud_filename)):
+        print("sdf_cloud_filename2: ", sdf_cloud_filename)
         return
     
     mesh = trimesh.load(filename)
+    print("mesh1: ", mesh)
     mesh = scale_to_unit_sphere(mesh)
+    print("mesh2: ", mesh)
 
-    mesh_sdf = MeshSDF(mesh, use_scans=True)
+    mesh_sdf = MeshSDF(mesh, use_scans=False)
     if CREATE_SDF_CLOUDS:
         try:
             points, sdf = mesh_sdf.get_sample_points(number_of_points=SDF_CLOUD_SAMPLE_SIZE)
             combined = np.concatenate((points, sdf[:, np.newaxis]), axis=1)
-            ensure_directory(sdf_cloud_filename)
+            ensure_directory(sdf_cloud_dirname)
             np.save(sdf_cloud_filename, combined)
         except BadMeshException:
             tqdm.write("Skipping bad mesh. ({:s})".format(filename))
@@ -80,6 +91,7 @@ def process_model_file(filename):
 def process_model_files():
     ensure_directory(DIRECTORY_SDF)
     files = list(get_model_files())
+    print("files l89:", files)
     
     worker_count = os.cpu_count()
     print("Using {:d} processes.".format(worker_count))

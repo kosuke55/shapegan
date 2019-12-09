@@ -11,8 +11,10 @@ MIN_SAMPLES_PER_CATEGORY = 2000
 VOXEL_RESOLUTION = 32
 
 VOXELS_SDF_FILENAME = "data/voxels-{:d}.to".format(VOXEL_RESOLUTION)
-SDF_POINTS_FILENAME = "data/sdf-points-{:d}.to"
-SDF_VALUES_FILENAME = "data/sdf-values-{:d}.to"
+# SDF_POINTS_FILENAME = "data/sdf-points-{:d}.to"
+# SDF_VALUES_FILENAME = "data/sdf-values-{:d}.to"
+SDF_POINTS_FILENAME = "data/sdf_points.to"
+SDF_VALUES_FILENAME = "data/sdf_values.to"
 SURFACE_POINTCLOUDS_FILENAME = "data/surface-pointclouds.to"
 LABELS_FILENAME = "data/labels.to"
 

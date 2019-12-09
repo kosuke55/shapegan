@@ -23,7 +23,7 @@ class Classifier(SavableModule):
             nn.Softmax(dim=1)
         )
 
-        self.cuda()
+        # self.cuda()
 
     def forward(self, x):
         if len(x.shape) == 3:

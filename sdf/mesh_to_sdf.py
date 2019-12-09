@@ -15,7 +15,8 @@ class BadMeshException(Exception):
 
 def scale_to_unit_sphere(mesh):
     if isinstance(mesh, trimesh.Scene):
-        mesh = mesh.dump().sum()
+        #mesh = mesh.dump().sum()
+        mesh = mesh
 
     origin = mesh.bounding_box.centroid
     vertices = mesh.vertices - origin
@@ -25,7 +26,7 @@ def scale_to_unit_sphere(mesh):
     return trimesh.Trimesh(vertices=vertices, faces=mesh.faces)
 
 class MeshSDF:
-    def __init__(self, mesh, use_scans=True):
+    def __init__(self, mesh, use_scans=False):
         if isinstance(mesh, trimesh.Scene):
             mesh = mesh.dump().sum()
         self.mesh = mesh
@@ -38,11 +39,14 @@ class MeshSDF:
         else:
             points, indices = mesh.sample(10000000, return_index=True)
             self.points = points
+            print("points: ", self.points)
             self.normals = mesh.face_normals[indices]
+            print("normals: ", self.normals)
 
         self.kd_tree = KDTree(self.points)
 
-    def get_random_surface_points(self, count, use_scans=True):
+    #def get_random_surface_points(self, count, use_scans=True):
+    def get_random_surface_points(self, count, use_scans=False):
         if use_scans:
             indices = np.random.choice(self.points.shape[0], count)
             return self.points[indices, :]
