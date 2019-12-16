@@ -5,16 +5,19 @@ import numpy as np
 from sdf.mesh_to_sdf import MeshSDF, scale_to_unit_sphere, BadMeshException
 from util import ensure_directory
 from multiprocessing import Pool
+from scipy.spatial.transform import Rotation
 
 DIRECTORY_MODELS = 'data/meshes/'
-MODEL_EXTENSION = '.obj'
+MODEL_EXTENSION = '.ply'
 DIRECTORY_SDF = 'data/sdf/'
 
 CREATE_VOXELS = True
-VOXEL_RESOLUTION = 32
+VOXEL_RESOLUTION = 64
 
 CREATE_SDF_CLOUDS = False
 SDF_CLOUD_SAMPLE_SIZE = 200000
+
+ROTATION = np.matmul(Rotation.from_euler('x', 90, degrees=True).as_dcm(), Rotation.from_euler('z', 180, degrees=True).as_dcm())
 
 def get_model_files():
     for directory, _, files in os.walk(DIRECTORY_MODELS):
@@ -52,7 +55,7 @@ def process_model_file(filename):
         return
     
     mesh = trimesh.load(filename)
-    mesh = scale_to_unit_sphere(mesh)
+    mesh = scale_to_unit_sphere(mesh, rotation_matrix=ROTATION)
 
     mesh_sdf = MeshSDF(mesh, use_scans=True)
     if CREATE_SDF_CLOUDS:

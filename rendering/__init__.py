@@ -70,7 +70,7 @@ class MeshRenderer():
         self.window = None
 
         self.background_color = background_color
-        self.model_color = (0.8, 0.1, 0.1)
+        self.model_color = (1.0, 0.5, 0.5)
 
         self.shadow_framebuffer = None
         self.shadow_texture = None

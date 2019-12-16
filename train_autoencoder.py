@@ -25,11 +25,7 @@ dataset.load_voxels(device)
 BATCH_SIZE = 32
 TEST_SPLIT = 0.05
 
-all_indices = list(range(dataset.size))
-random.shuffle(all_indices)
-test_indices = all_indices[:int(dataset.size * TEST_SPLIT)]
-training_indices = list(all_indices[int(dataset.size * TEST_SPLIT):])
-test_data = dataset.voxels[test_indices]
+training_indices = list(range(dataset.size))
 
 VIEWER_UPDATE_STEP = 20
 
@@ -39,7 +35,7 @@ autoencoder = Autoencoder(is_variational=IS_VARIATIONAL)
 if "continue" in sys.argv:
     autoencoder.load()
 
-optimizer = optim.Adam(autoencoder.parameters(), lr=0.00005)
+optimizer = optim.Adam(autoencoder.parameters(), lr=0.00002)
 
 show_viewer = "nogui" not in sys.argv
 
@@ -47,7 +43,7 @@ if show_viewer:
     from rendering import MeshRenderer
     viewer = MeshRenderer()
 
-error_history = deque(maxlen = BATCH_SIZE)
+error_history = deque(maxlen = dataset.voxels.shape[0] // BATCH_SIZE)
 
 criterion = nn.functional.mse_loss
 
@@ -75,34 +71,13 @@ def get_reconstruction_loss(input, target):
     return torch.mean(torch.abs(difference))
 
 def test(epoch_index, epoch_time):
-    with torch.no_grad():
-        autoencoder.eval()
+    reconstruction_loss = np.mean(error_history)
+    print("Epoch {:d} ({:.1f}s): ".format(epoch_index, epoch_time) +
+        "training loss: {:4f}, ".format(reconstruction_loss)
+    )
 
-        if IS_VARIATIONAL:
-            output, mean, log_variance = autoencoder(test_data)
-            kld = kld_loss(mean, log_variance)
-        else:
-            output = autoencoder(test_data)
-            kld = 0
-
-        reconstruction_loss = get_reconstruction_loss(output, test_data)
-        
-        voxel_diff = voxel_difference(output, test_data)
-        inception_score = autoencoder.get_inception_score()
-
-        if "show_slice" in sys.argv:
-            print(create_text_slice(output[0, :, :, :]))
-
-        print("Epoch {:d} ({:.1f}s): ".format(epoch_index, epoch_time) +
-            "Reconstruction loss: {:.4f}, ".format(reconstruction_loss) +
-            "Voxel diff: {:.4f}, ".format(voxel_diff) + 
-            "KLD loss: {:4f}, ".format(kld) + 
-            "training loss: {:4f}, ".format(sum(error_history) / len(error_history)) +
-            "inception score: {:4f}".format(inception_score)
-        )
-
-        log_file.write('{:d} {:.1f} {:.6f} {:.6f} {:.6f} {:.6f}\n'.format(epoch_index, epoch_time, reconstruction_loss, kld, voxel_diff, inception_score))
-        log_file.flush()
+    log_file.write('{:d} {:.1f} {:.6f}\n'.format(epoch_index, epoch_time, reconstruction_loss))
+    log_file.flush()
 
 def train():    
     for epoch in count():

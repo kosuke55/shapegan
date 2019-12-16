@@ -54,12 +54,12 @@ def get_random():
 
 
 previous_model = None
-next_model = get_random()
+next_model = autoencoder.encode(dataset.voxels[0, :, :, :])
 
-for epoch in count():
+for i in range(1, dataset.voxels.shape[0]):
     try:
         previous_model = next_model
-        next_model = get_random()
+        next_model = autoencoder.encode(dataset.voxels[i, :, :, :])
 
         start = time.perf_counter()
         end = start + TRANSITION_TIME

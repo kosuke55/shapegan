@@ -83,7 +83,7 @@ def create_tsne_plot(codes, voxels = None, labels = None, filename = "plot.pdf",
     from sklearn.manifold import TSNE
     from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
-    width, height = 40, 52
+    width, height = 20, 20
 
     print("Calculating t-sne embedding...")
     tsne = TSNE(n_components=2)
@@ -92,7 +92,7 @@ def create_tsne_plot(codes, voxels = None, labels = None, filename = "plot.pdf",
     print("Plotting...")
     fig, ax = plt.subplots()
     plt.axis('off')
-    margin = 0.0128
+    margin = 0.0128 * 3
     plt.margins(margin * height / width, margin)
 
     x = embedded[:, 0]
@@ -100,7 +100,7 @@ def create_tsne_plot(codes, voxels = None, labels = None, filename = "plot.pdf",
     x = np.interp(x, (x.min(), x.max()), (0, 1))
     y = np.interp(y, (y.min(), y.max()), (0, 1))
 
-    ax.scatter(x, y, c=labels, s = 40, cmap='Set1')
+    ax.scatter(x, y, s = 40, cmap='Set1')
     fig.set_size_inches(width, height)
 
     if voxels is not None:
@@ -108,26 +108,9 @@ def create_tsne_plot(codes, voxels = None, labels = None, filename = "plot.pdf",
         from rendering import MeshRenderer
         viewer = MeshRenderer(start_thread=False)
         for i in tqdm(range(voxels.shape[0])):
-            viewer.set_voxels(voxels[i, :, :, :].cpu().numpy())
-            viewer.model_color = dataset.get_color(labels[i])
+            viewer.set_voxels(voxels[i, :, :, :])
             image = viewer.get_image(crop=True, output_size=128)
-            box = AnnotationBbox(OffsetImage(image, zoom = 0.5, cmap='gray'), (x[i], y[i]), frameon=True)
-            ax.add_artist(box)
-
-    if indices is not None:
-        print("Creating images...")
-        dataset_directories = directories = open('data/models.txt', 'r').readlines()
-        from rendering import MeshRenderer
-        viewer = MeshRenderer(start_thread=False)
-        import trimesh
-        import logging
-        logging.getLogger('trimesh').setLevel(1000000)
-        for i in tqdm(range(len(indices))):
-            mesh = trimesh.load(os.path.join(dataset_directories[index].strip(), 'model_normalized.obj'))
-            viewer.set_mesh(mesh, center_and_scale=True)
-            viewer.model_color = dataset.get_color(labels[i])
-            image = viewer.get_image(crop=True, output_size=128)
-            box = AnnotationBbox(OffsetImage(image, zoom = 0.5, cmap='gray'), (x[i], y[i]), frameon=True)
+            box = AnnotationBbox(OffsetImage(image, zoom = 0.5, cmap='gray'), (x[i], y[i]), frameon=False)
             ax.add_artist(box)
         
     print("Saving PDF...")
@@ -218,28 +201,31 @@ if "autodecoder-classes" in sys.argv:
 if "autoencoder" in sys.argv:
     from dataset import dataset as dataset
     dataset.load_voxels(device)
-    dataset.load_labels(device)
     
-    indices = random.sample(list(range(dataset.size)), 1000)
-    voxels = dataset.voxels[indices, :, :, :]
-    autoencoder = load_autoencoder(is_variational='clasic' not in sys.argv)
+    voxels = dataset.voxels
+    autoencoder = load_autoencoder(is_variational='classic' not in sys.argv)
     print("Generating codes...")
     with torch.no_grad():
         codes = autoencoder.encode(voxels).cpu().numpy()
-    create_tsne_plot(codes, voxels, dataset.labels[indices].cpu().numpy(), "plots/{:s}autoencoder-tsne.pdf".format('' if 'classic' in sys.argv else 'variational-'))
+    voxels = autoencoder.forward(voxels).detach()
+    create_tsne_plot(codes, voxels=voxels, filename="plots/{:s}autoencoder-tsne.png".format('' if 'classic' in sys.argv else 'variational-'))
 
 if "autodecoder_tsne" in sys.argv:
-    from dataset import dataset as dataset
-    dataset.load_labels('cpu')
-    dataset.load_labels()
     from model.sdf_net import LATENT_CODES_FILENAME
-    latent_codes = torch.load(LATENT_CODES_FILENAME).detach().cpu().numpy()
+
+    sdf_net, latent_codes = load_sdf_net(return_latent_codes=True)
+
+    RESOLUTION = 128
+    voxels = np.zeros((latent_codes.shape[0], RESOLUTION +2, RESOLUTION +2, RESOLUTION +2))
     
-    indices = random.sample(range(latent_codes.shape[0]), 1000)
-    latent_codes = latent_codes[indices, :]
-    labels = dataset.labels[indices]
+    for i in tqdm(range(latent_codes.shape[0])):
+        voxels_current = sdf_net.get_voxels(latent_codes[i, :], RESOLUTION, sphere_only=False)
+        voxels[i, :, :, :] = voxels_current
     
-    create_tsne_plot(latent_codes, labels=labels, filename="plots/deepsdf-tsne.pdf", indices=indices)
+    latent_codes = latent_codes.detach().cpu().numpy()
+
+    
+    create_tsne_plot(latent_codes, filename="plots/deepsdf-tsne.png", voxels=voxels)
 
 
 if "autoencoder_hist" in sys.argv:

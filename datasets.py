@@ -34,9 +34,9 @@ class VoxelsMultipleFiles(Dataset):
         return result
 
     @staticmethod
-    def glob(directory, extension='.npy'):
+    def glob(directory, extension='-32.npy'):
         import glob
-        files = glob.glob(os.path.join(directory, '**' + extension), recursive=True)
+        files = glob.glob(directory, recursive=True)
         return VoxelsMultipleFiles(files)
     
     @staticmethod
@@ -61,6 +61,7 @@ def show_dataset(dataset):
         time.sleep(0.5)
 
 if __name__ == '__main__':
-    #dataset = VoxelsMultipleFiles.glob('data/chairs/voxels_64/')
-    dataset = VoxelsMultipleFiles.from_split('data/chairs/voxels_{:d}/{{:s}}.npy'.format(64), 'data/chairs/train.txt')
+    dataset = VoxelsMultipleFiles.glob('data/sdf/**/mesh-voxels-64.npy')
+    print(len(dataset))
+    #dataset = VoxelsMultipleFiles.from_split('data/chairs/voxels_{:d}/{{:s}}.npy'.format(64), 'data/chairs/train.txt')
     dataset.show()

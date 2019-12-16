@@ -39,8 +39,8 @@ else:
     latent_codes = normal_distribution.sample((MODEL_COUNT, LATENT_CODE_SIZE)).to(device)
 latent_codes.requires_grad = True
 
-network_optimizer = optim.Adam(sdf_net.parameters(), lr=1e-5)
-latent_code_optimizer = optim.Adam([latent_codes], lr=1e-5)
+network_optimizer = optim.Adam(sdf_net.parameters(), lr=2e-5)
+latent_code_optimizer = optim.Adam([latent_codes], lr=2e-5)
 criterion = nn.MSELoss()
 
 first_epoch = 0
@@ -85,7 +85,7 @@ def train():
 
             if batch_index % 400 == 0 and "nogui" not in sys.argv:
                 try:
-                    viewer.set_mesh(sdf_net.get_mesh(latent_codes[random.randrange(MODEL_COUNT), :]))
+                    viewer.set_mesh(sdf_net.get_mesh(latent_codes[random.randrange(MODEL_COUNT), :], sphere_only=False, voxel_resolution=96))
                 except ValueError:
                     pass
 

@@ -8,7 +8,7 @@ import sys
 
 DATASET_DIRECTORY = "data/shapenet/"
 MIN_SAMPLES_PER_CATEGORY = 2000
-VOXEL_RESOLUTION = 32
+VOXEL_RESOLUTION = 64
 
 VOXELS_SDF_FILENAME = "data/voxels-{:d}.to".format(VOXEL_RESOLUTION)
 SDF_POINTS_FILENAME = "data/sdf-points-{:d}.to"

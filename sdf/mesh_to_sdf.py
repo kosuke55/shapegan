@@ -29,7 +29,7 @@ def scale_to_unit_sphere(mesh, rotation_matrix=None):
     return trimesh.Trimesh(vertices=vertices, faces=mesh.faces)
 
 class MeshSDF:
-    def __init__(self, mesh, use_scans=True):
+    def __init__(self, mesh, use_scans=False):
         if isinstance(mesh, trimesh.Scene):
             mesh = mesh.dump().sum()
         self.mesh = mesh
@@ -120,6 +120,7 @@ class MeshSDF:
         return np.concatenate([self.points[indices, :], self.normals[indices, :]], axis=1)
 
     def check_voxels(self, voxels):
+        return
         block = voxels[:-1, :-1, :-1]
         d1 = (block - voxels[1:, :-1, :-1]).reshape(-1)
         d2 = (block - voxels[:-1, 1:, :-1]).reshape(-1)
