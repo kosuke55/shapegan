@@ -26,14 +26,12 @@ if USE_HYBRID_GAN:
 sdf_net.load()
 sdf_net.eval()
 
-if USE_HYBRID_GAN:
-    codes = standard_normal_distribution.sample((SAMPLE_COUNT + 1, LATENT_CODE_SIZE)).numpy()
-else:
-    codes = torch.load(LATENT_CODES_FILENAME).detach()
-    SAMPLE_COUNT = codes.shape[0] - 1
 
-#codes[0, :] = codes[-1, :] # Make animation periodic
-#spline = scipy.interpolate.CubicSpline(np.arange(SAMPLE_COUNT + 1), codes, axis=0, bc_type='periodic')
+codes = torch.load(LATENT_CODES_FILENAME).detach().cpu().numpy()
+SAMPLE_COUNT = codes.shape[0] - 1
+
+codes[0, :] = codes[-1, :] # Make animation periodic
+spline = scipy.interpolate.CubicSpline(np.arange(SAMPLE_COUNT + 1), codes, axis=0, bc_type='periodic')
 
 def create_image_sequence():
     ensure_directory('images')

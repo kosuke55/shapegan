@@ -29,7 +29,7 @@ def scale_to_unit_sphere(mesh, rotation_matrix=None):
     return trimesh.Trimesh(vertices=vertices, faces=mesh.faces)
 
 class MeshSDF:
-    def __init__(self, mesh, use_scans=False):
+    def __init__(self, mesh, use_scans=True):
         if isinstance(mesh, trimesh.Scene):
             mesh = mesh.dump().sum()
         self.mesh = mesh
@@ -53,7 +53,7 @@ class MeshSDF:
         else:
             return self.mesh.sample(count)
 
-    def get_sdf(self, query_points, use_depth_buffer=False, sample_count=11):
+    def get_sdf(self, query_points, use_depth_buffer=True, sample_count=11):
         if use_depth_buffer:
             distances, _ = self.kd_tree.query(query_points)
             distances = distances.astype(np.float32).reshape(-1) * -1

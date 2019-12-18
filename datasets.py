@@ -61,7 +61,7 @@ def show_dataset(dataset):
         time.sleep(0.5)
 
 if __name__ == '__main__':
-    dataset = VoxelsMultipleFiles.glob('data/sdf/**/mesh-voxels-64.npy')
+    dataset = VoxelsMultipleFiles.glob('data/sdf/**/*-128.npy')
     print(len(dataset))
     #dataset = VoxelsMultipleFiles.from_split('data/chairs/voxels_{:d}/{{:s}}.npy'.format(64), 'data/chairs/train.txt')
     dataset.show()

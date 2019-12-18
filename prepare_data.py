@@ -12,12 +12,13 @@ MODEL_EXTENSION = '.ply'
 DIRECTORY_SDF = 'data/sdf/'
 
 CREATE_VOXELS = True
-VOXEL_RESOLUTION = 64
+VOXEL_RESOLUTION = 128
 
 CREATE_SDF_CLOUDS = False
 SDF_CLOUD_SAMPLE_SIZE = 200000
 
 ROTATION = np.matmul(Rotation.from_euler('x', 90, degrees=True).as_dcm(), Rotation.from_euler('z', 180, degrees=True).as_dcm())
+ROTATION_HUMAN = np.matmul(Rotation.from_euler('x', -90, degrees=True).as_dcm(), Rotation.from_euler('z', 180, degrees=True).as_dcm())
 
 def get_model_files():
     for directory, _, files in os.walk(DIRECTORY_MODELS):
@@ -54,8 +55,10 @@ def process_model_file(filename):
     if not (CREATE_VOXELS and not os.path.isfile(voxels_filename) or CREATE_SDF_CLOUDS and not os.path.isfile(sdf_cloud_filename)):
         return
     
+    is_human = 'CMU_' in filename or 'KKI_' in filename or 'Caltech_' in filename or 'Leuven_' in filename
+
     mesh = trimesh.load(filename)
-    mesh = scale_to_unit_sphere(mesh, rotation_matrix=ROTATION)
+    mesh = scale_to_unit_sphere(mesh, rotation_matrix=ROTATION_HUMAN if is_human else ROTATION)
 
     mesh_sdf = MeshSDF(mesh, use_scans=True)
     if CREATE_SDF_CLOUDS:
@@ -83,6 +86,22 @@ def process_model_file(filename):
 def process_model_files():
     ensure_directory(DIRECTORY_SDF)
     files = list(get_model_files())
+
+    '''from rendering import MeshRenderer
+    viewer = MeshRenderer()
+
+    for filename in files:
+        is_human = 'CMU_' in filename or 'KKI_' in filename or 'Caltech_' in filename or 'Leuven_' in filename
+
+
+        mesh = trimesh.load(filename)
+        mesh = scale_to_unit_sphere(mesh, rotation_matrix=ROTATION_HUMAN if is_human else ROTATION)
+        print(filename)
+        viewer.set_mesh(mesh)
+        viewer.model_color = (0.8, 0.0, 0.0) if is_human else (1.0, 0.5, 0.5)
+        import time
+        time.sleep(1)'''
+
     
     worker_count = os.cpu_count()
     print("Using {:d} processes.".format(worker_count))

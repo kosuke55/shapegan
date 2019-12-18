@@ -29,6 +29,10 @@ class Autoencoder(SavableModule):
             nn.BatchNorm3d(8 * amcm),
             nn.LeakyReLU(negative_slope=0.2, inplace=True),
             
+            nn.Conv3d(in_channels = 8 * amcm, out_channels = 8 * amcm, kernel_size = 4, stride = 2, padding = 1),
+            nn.BatchNorm3d(8 * amcm),
+            nn.LeakyReLU(negative_slope=0.2, inplace=True),
+            
             nn.Conv3d(in_channels = 8 * amcm, out_channels = LATENT_CODE_SIZE * 2, kernel_size = 4, stride = 1),
             nn.BatchNorm3d(LATENT_CODE_SIZE * 2),
             nn.LeakyReLU(negative_slope=0.2, inplace=True),
@@ -56,6 +60,10 @@ class Autoencoder(SavableModule):
             nn.BatchNorm3d(8 * amcm),
             nn.LeakyReLU(negative_slope=0.2, inplace=True),
 
+            nn.ConvTranspose3d(in_channels = 8 * amcm, out_channels = 8 * amcm, kernel_size = 4, stride = 2, padding = 1),
+            nn.BatchNorm3d(8 * amcm),
+            nn.LeakyReLU(negative_slope=0.2, inplace=True),
+
             nn.ConvTranspose3d(in_channels = 8 * amcm, out_channels = 4 * amcm, kernel_size = 4, stride = 2, padding = 1),
             nn.BatchNorm3d(4 * amcm),
             nn.LeakyReLU(negative_slope=0.2, inplace=True),
@@ -73,7 +81,7 @@ class Autoencoder(SavableModule):
         self.cuda()
 
     def encode(self, x, return_mean_and_log_variance = False):
-        x = x.reshape((-1, 1, 64, 64, 64))
+        x = x.reshape((-1, 1, 128, 128, 128))
         x = self.encoder(x)
 
         if not self.is_variational:

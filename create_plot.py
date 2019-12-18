@@ -79,7 +79,7 @@ def load_sdf_net(filename=None, return_latent_codes = False):
     else:
         return sdf_net
 
-def create_tsne_plot(codes, voxels = None, labels = None, filename = "plot.pdf", indices=None):
+def create_tsne_plot(codes, voxels = None, labels = None, filename = "plot.pdf", indices=None, line_indices=None):
     from sklearn.manifold import TSNE
     from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
@@ -100,8 +100,19 @@ def create_tsne_plot(codes, voxels = None, labels = None, filename = "plot.pdf",
     x = np.interp(x, (x.min(), x.max()), (0, 1))
     y = np.interp(y, (y.min(), y.max()), (0, 1))
 
+    embedded[:, 0] = x
+    embedded[:, 1] = y
+
     ax.scatter(x, y, s = 40, cmap='Set1')
     fig.set_size_inches(width, height)
+
+    if line_indices is not None:
+        line = embedded[line_indices, :]
+        import scipy
+        spline = scipy.interpolate.CubicSpline(np.arange(line.shape[0]), line, axis=0)
+        line_points = spline(np.arange((line.shape[0] - 1) * 20) / 20)
+        ax.plot(line[:, 0], line[:, 1], c=(0.2, 0.2, 0.2, 1.0), zorder=100, linewidth=2)
+    
 
     if voxels is not None:
         print("Creating images...")
@@ -202,13 +213,33 @@ if "autoencoder" in sys.argv:
     from dataset import dataset as dataset
     dataset.load_voxels(device)
     
+    by_size = open('data/by_size.txt').readlines()
+    by_size = [i.strip() for i in by_size]
+    
+    DIRECTORY_MODELS = 'data/meshes/'
+    MODEL_EXTENSION = '.ply'
+
+    def get_model_files():
+        for directory, _, files in os.walk(DIRECTORY_MODELS):
+            for filename in files:
+                if filename.endswith(MODEL_EXTENSION):
+                    yield os.path.join(directory, filename)
+    filenames = sorted(list(get_model_files()))
+
+    line_indices = []
+    for name in by_size:
+        for i, file_name in enumerate(filenames):
+            if name in file_name:
+                line_indices.append(i)
+                break
+
     voxels = dataset.voxels
     autoencoder = load_autoencoder(is_variational='classic' not in sys.argv)
     print("Generating codes...")
     with torch.no_grad():
         codes = autoencoder.encode(voxels).cpu().numpy()
     voxels = autoencoder.forward(voxels).detach()
-    create_tsne_plot(codes, voxels=voxels, filename="plots/{:s}autoencoder-tsne.png".format('' if 'classic' in sys.argv else 'variational-'))
+    create_tsne_plot(codes, voxels=voxels, filename="plots/{:s}autoencoder-tsne.png".format('' if 'classic' in sys.argv else 'variational-'), line_indices=line_indices)
 
 if "autodecoder_tsne" in sys.argv:
     from model.sdf_net import LATENT_CODES_FILENAME
@@ -947,3 +978,48 @@ if "deepsdf-interpolation-stl" in sys.argv:
         print(i)
         mesh = sdf_net.get_mesh(codes[i, :], voxel_resolution=256, sphere_only=False)
         mesh.export('plots/mesh-{:d}.stl'.format(i))
+
+
+if 'volume' in sys.argv:
+    import trimesh
+    from dataset import dataset as dataset
+    dataset.load_voxels(device)
+    
+    by_size = open('data/by_size.txt').readlines()
+    by_size = [i.strip() for i in by_size]
+    
+    DIRECTORY_MODELS = 'data/meshes/'
+    MODEL_EXTENSION = '.ply'
+
+    def get_model_files():
+        for directory, _, files in os.walk(DIRECTORY_MODELS):
+            for filename in files:
+                if filename.endswith(MODEL_EXTENSION):
+                    yield os.path.join(directory, filename)
+    filenames = sorted(list(get_model_files()))
+
+    volumes = []
+    for file_name in tqdm(filenames):
+        mesh = trimesh.load(file_name)
+        volumes.append(mesh.volume.item())
+
+    voxels = dataset.voxels
+    autoencoder = load_autoencoder(is_variational=False)
+    print("Generating codes...")
+    with torch.no_grad():
+        codes = autoencoder.encode(voxels).cpu().numpy()
+        
+    volume_difference = []
+    latent_distance = []
+
+    for i in range(len(volumes)):
+        for j in range(len(volumes)):
+            volume_difference.append(abs(volumes[i] - volumes[j]))
+            latent_distance.append(np.linalg.norm(codes[i, :] - codes[j, :]))
+    
+    plt.scatter(volume_difference, latent_distance, marker='x', s=2)
+
+    plt.xlabel('Difference in volume')
+    plt.ylabel('Distance in latent space')
+    plt.title('Volume difference vs. latent distance')
+    plt.savefig("plots/volume.pdf")

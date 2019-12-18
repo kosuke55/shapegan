@@ -22,7 +22,7 @@ from util import create_text_slice, device
 dataset.load_voxels(device)
 
 
-BATCH_SIZE = 32
+BATCH_SIZE = 16
 TEST_SPLIT = 0.05
 
 training_indices = list(range(dataset.size))
