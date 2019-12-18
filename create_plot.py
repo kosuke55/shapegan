@@ -79,11 +79,11 @@ def load_sdf_net(filename=None, return_latent_codes = False):
     else:
         return sdf_net
 
-def create_tsne_plot(codes, voxels = None, labels = None, filename = "plot.pdf", indices=None, line_indices=None):
+def create_tsne_plot(codes, voxels = None, labels = None, filename = "plot.pdf", indices=None, line_indices=None, colors=None, names=None):
     from sklearn.manifold import TSNE
     from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
-    width, height = 20, 20
+    width, height = 16, 16
 
     print("Calculating t-sne embedding...")
     tsne = TSNE(n_components=2)
@@ -120,9 +120,15 @@ def create_tsne_plot(codes, voxels = None, labels = None, filename = "plot.pdf",
         viewer = MeshRenderer(start_thread=False)
         for i in tqdm(range(voxels.shape[0])):
             viewer.set_voxels(voxels[i, :, :, :])
+            if colors is not None:
+                viewer.model_color = colors[i]
             image = viewer.get_image(crop=True, output_size=128)
-            box = AnnotationBbox(OffsetImage(image, zoom = 0.5, cmap='gray'), (x[i], y[i]), frameon=False)
+            box = AnnotationBbox(OffsetImage(image, zoom = 0.35, cmap='gray'), (x[i], y[i]), frameon=True)
             ax.add_artist(box)
+
+    if names is not None:
+        for i, name in enumerate(names):
+            ax.text(x[i], y[i] - 0.04, name, horizontalalignment='center', verticalalignment='center', zorder=100)
         
     print("Saving PDF...")
     
@@ -211,7 +217,7 @@ if "autodecoder-classes" in sys.argv:
 
 if "autoencoder" in sys.argv:
     from dataset import dataset as dataset
-    dataset.load_voxels(device)
+    import csv
     
     by_size = open('data/by_size.txt').readlines()
     by_size = [i.strip() for i in by_size]
@@ -225,21 +231,51 @@ if "autoencoder" in sys.argv:
                 if filename.endswith(MODEL_EXTENSION):
                     yield os.path.join(directory, filename)
     filenames = sorted(list(get_model_files()))
+    
+    file = open('data/color-name-mapping.csv', 'r')
+    reader = csv.reader(file)
+    reader_iterator = iter(reader)
+    column_names = next(reader_iterator)
 
-    line_indices = []
-    for name in by_size:
-        for i, file_name in enumerate(filenames):
-            if name in file_name:
-                line_indices.append(i)
+    csv_file_names = []
+    csv_colors = []
+    csv_names = []
+
+    for row in reader_iterator:
+        csv_file_names.append(row[0].strip())
+        csv_colors.append(row[1])
+        csv_names.append(row[2])
+
+    indices = []
+    for file_name in filenames:
+        found_any = False
+        for j in range(len(csv_file_names)):
+            if csv_file_names[j] in file_name:
+                indices.append(j)
+                found_any = True
                 break
+        if not found_any:
+            print('Filename not found: ' + file_name)
+            indices.append(0)
 
+    colors = [csv_colors[i].lstrip('#') for i in indices]
+    colors = [tuple(int(h[i:i+2], 16) / 255 for i in (0, 2, 4)) for h in colors]
+    names = [csv_names[i] for i in indices]
+
+    dataset.load_voxels(device)
     voxels = dataset.voxels
     autoencoder = load_autoencoder(is_variational='classic' not in sys.argv)
     print("Generating codes...")
+    codes = np.zeros((voxels.shape[0], LATENT_CODE_SIZE))
     with torch.no_grad():
-        codes = autoencoder.encode(voxels).cpu().numpy()
-    voxels = autoencoder.forward(voxels).detach()
-    create_tsne_plot(codes, voxels=voxels, filename="plots/{:s}autoencoder-tsne.png".format('' if 'classic' in sys.argv else 'variational-'), line_indices=line_indices)
+        for i in tqdm(range(voxels.shape[0])):
+            codes[i, :] = autoencoder.encode(voxels[i, :, :, :]).cpu().numpy()
+
+    reconstructed = np.zeros(voxels.shape)
+    with torch.no_grad():
+        for i in tqdm(range(voxels.shape[0])):
+            reconstructed[i, :, :, :] = autoencoder.forward(voxels[i, :, :, :]).detach().cpu().numpy()
+    create_tsne_plot(codes, voxels=reconstructed, filename="plots/{:s}autoencoder-tsne.pdf".format('' if 'classic' in sys.argv else 'variational-'), colors=colors, names=names)
 
 if "autodecoder_tsne" in sys.argv:
     from model.sdf_net import LATENT_CODES_FILENAME

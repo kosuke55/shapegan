@@ -55,7 +55,7 @@ def process_model_file(filename):
     if not (CREATE_VOXELS and not os.path.isfile(voxels_filename) or CREATE_SDF_CLOUDS and not os.path.isfile(sdf_cloud_filename)):
         return
     
-    is_human = 'CMU_' in filename or 'KKI_' in filename or 'Caltech_' in filename or 'Leuven_' in filename
+    is_human = 'CMU_' in filename or 'KKI_' in filename or 'Caltech_' in filename or 'Leuven_' in filename or 'PE0' in filename
 
     mesh = trimesh.load(filename)
     mesh = scale_to_unit_sphere(mesh, rotation_matrix=ROTATION_HUMAN if is_human else ROTATION)
@@ -91,8 +91,7 @@ def process_model_files():
     viewer = MeshRenderer()
 
     for filename in files:
-        is_human = 'CMU_' in filename or 'KKI_' in filename or 'Caltech_' in filename or 'Leuven_' in filename
-
+        is_human = 'CMU_' in filename or 'KKI_' in filename or 'Caltech_' in filename or 'Leuven_' in filename or 'PE0' in filename
 
         mesh = trimesh.load(filename)
         mesh = scale_to_unit_sphere(mesh, rotation_matrix=ROTATION_HUMAN if is_human else ROTATION)
@@ -100,8 +99,8 @@ def process_model_files():
         viewer.set_mesh(mesh)
         viewer.model_color = (0.8, 0.0, 0.0) if is_human else (1.0, 0.5, 0.5)
         import time
-        time.sleep(1)'''
-
+        time.sleep(1)
+    '''
     
     worker_count = os.cpu_count()
     print("Using {:d} processes.".format(worker_count))
