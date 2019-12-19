@@ -326,7 +326,7 @@ class MeshRenderer():
     def stop(self):
         self.running = False
 
-    def get_image(self, crop=False, output_size=None, greyscale=False, flip_red_blue=False):
+    def get_image(self, crop=False, output_size=None, greyscale=False, flip_red_blue=False, create_alpha=False):
         if self.request_render:
             self._render()
         if output_size is None:
@@ -342,9 +342,15 @@ class MeshRenderer():
         if crop:
             array = crop_image(array)
 
+        if create_alpha:
+            alpha_image = np.zeros((array.shape[0], array.shape[1], 4))
+            alpha_image[:, :, :3] = array
+            alpha_image[:, :, 3] = 255 * (np.min(array, axis=2) != 255).astype(float)
+       
+            array = alpha_image
+
         if output_size != self.size:
             array = cv2.resize(array, dsize=(output_size, output_size), interpolation=cv2.INTER_CUBIC)
-
         return array
 
     def save_screenshot(self):

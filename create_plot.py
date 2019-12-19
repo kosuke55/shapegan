@@ -92,7 +92,7 @@ def create_tsne_plot(codes, voxels = None, labels = None, filename = "plot.pdf",
     print("Plotting...")
     fig, ax = plt.subplots()
     plt.axis('off')
-    margin = 0.0128 * 3
+    margin = 0.0128 * 6
     plt.margins(margin * height / width, margin)
 
     x = embedded[:, 0]
@@ -122,8 +122,9 @@ def create_tsne_plot(codes, voxels = None, labels = None, filename = "plot.pdf",
             viewer.set_voxels(voxels[i, :, :, :])
             if colors is not None:
                 viewer.model_color = colors[i]
-            image = viewer.get_image(crop=True, output_size=128)
-            box = AnnotationBbox(OffsetImage(image, zoom = 0.35, cmap='gray'), (x[i], y[i]), frameon=True)
+            image = viewer.get_image(crop=True, output_size=128, create_alpha=True)
+
+            box = AnnotationBbox(OffsetImage(image / 255, zoom = 0.35), (x[i], y[i]), frameon=False)
             ax.add_artist(box)
 
     if names is not None:
@@ -274,8 +275,8 @@ if "autoencoder" in sys.argv:
     reconstructed = np.zeros(voxels.shape)
     with torch.no_grad():
         for i in tqdm(range(voxels.shape[0])):
-            reconstructed[i, :, :, :] = autoencoder.forward(voxels[i, :, :, :]).detach().cpu().numpy()
-    create_tsne_plot(codes, voxels=reconstructed, filename="plots/{:s}autoencoder-tsne.pdf".format('' if 'classic' in sys.argv else 'variational-'), colors=colors, names=names)
+            reconstructed[i, :, :, :] = autoencoder.decode(autoencoder.encode((voxels[i, :, :, :]))).detach().cpu().numpy()
+    create_tsne_plot(codes, voxels=reconstructed, filename="plots/{:s}autoencoder-tsne.svg".format('' if 'classic' in sys.argv else 'variational-'), colors=colors, names=names)
 
 if "autodecoder_tsne" in sys.argv:
     from model.sdf_net import LATENT_CODES_FILENAME
