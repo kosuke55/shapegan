@@ -10,7 +10,7 @@ import random
 from util import device
 
 class ImageGrid():
-    def __init__(self, width, height=1, cell_width = 3, cell_height = None, margin=0.2, create_viewer=True, crop=True):
+    def __init__(self, width, height=1, cell_width = 3, cell_height = None, margin=0.05, create_viewer=True, crop=True):
         print("Plotting...")
         self.width = width
         self.height = height
@@ -380,32 +380,78 @@ if "autoencoder_examples" in sys.argv:
         image = viewer.get_image(output_size=512)
         axs[i, 2].imshow(image, cmap='gray')
         axs[i, 2].axis('off')
-    plt.savefig("plots/autoencoder-examples.pdf", bbox_inches='tight', dpi=400)
+    plt.savefig("plots/autoencoder-examples.svg", bbox_inches='tight', dpi=400)
 
 if "autoencoder_examples_2" in sys.argv:
     from dataset import dataset as dataset
+
+
+    DIRECTORY_MODELS = 'data/meshes/'
+    MODEL_EXTENSION = '.ply'
+
+    import csv
+
+    def get_model_files():
+        for directory, _, files in os.walk(DIRECTORY_MODELS):
+            for filename in files:
+                if filename.endswith(MODEL_EXTENSION):
+                    yield os.path.join(directory, filename)
+    filenames = sorted(list(get_model_files()))
+    
+    file = open('data/color-name-mapping.csv', 'r')
+    reader = csv.reader(file)
+    reader_iterator = iter(reader)
+    column_names = next(reader_iterator)
+
+    csv_file_names = []
+    csv_colors = []
+    csv_names = []
+
+    for row in reader_iterator:
+        csv_file_names.append(row[0].strip())
+        csv_colors.append(row[1])
+        csv_names.append(row[2])
+
+    indices = []
+    for file_name in filenames:
+        found_any = False
+        for j in range(len(csv_file_names)):
+            if csv_file_names[j] in file_name:
+                indices.append(j)
+                found_any = True
+                break
+        if not found_any:
+            print('Filename not found: ' + file_name)
+            indices.append(0)
+
+    colors = [csv_colors[i].lstrip('#') for i in indices]
+    colors = [tuple(int(h[i:i+2], 16) / 255 for i in (0, 2, 4)) for h in colors]
+    names = [csv_names[i] for i in indices]
+
     dataset.load_voxels(device)
 
-    indices = random.sample(list(range(dataset.size)), 5)
+    csv_selection = [65, 61, 33, 37, 16]
+    indices = [indices.index(i-2) for i in csv_selection]
+    for i in indices:
+        print(names[i])
     voxels = dataset.voxels[indices, :, :, :]
     ae = load_autoencoder(is_variational=False)
-    vae = load_autoencoder(is_variational=True)
 
     print("Generating codes...")
     with torch.no_grad():
         codes_ae = ae.encode(voxels)
         reconstructed_ae = ae.decode(codes_ae).cpu().numpy()
-        codes_vae = vae.encode(voxels)
-        reconstructed_vae = vae.decode(codes_vae).cpu().numpy()
     
-    plot = ImageGrid(len(indices), 3)
+    plot = ImageGrid(len(indices), 2)
+
+    plot.viewer.rotation = (130+180, 20)
 
     for i in range(len(indices)):
+        plot.viewer.model_color = colors[indices[i]]
         plot.set_voxels(voxels[i, :, :, :], i, 0)
         plot.set_voxels(reconstructed_ae[i, :, :, :], i, 1)
-        plot.set_voxels(reconstructed_vae[i, :, :, :], i, 2)
 
-    plot.save("plots/ae-vae-examples.pdf")
+    plot.save("plots/ae-examples.png")
 
 if "autoencoder_generate" in sys.argv:
     from dataset import dataset as dataset
@@ -462,43 +508,86 @@ if "autoencoder_generate" in sys.argv:
     plot.save("plots/ae-vae-samples.pdf")
 
 if "autoencoder_interpolation" in sys.argv:
+    DIRECTORY_MODELS = 'data/meshes/'
+    MODEL_EXTENSION = '.ply'
+
+    import csv
+
+    def get_model_files():
+        for directory, _, files in os.walk(DIRECTORY_MODELS):
+            for filename in files:
+                if filename.endswith(MODEL_EXTENSION):
+                    yield os.path.join(directory, filename)
+    filenames = sorted(list(get_model_files()))
+    
+    file = open('data/color-name-mapping.csv', 'r')
+    reader = csv.reader(file)
+    reader_iterator = iter(reader)
+    column_names = next(reader_iterator)
+
+    csv_file_names = []
+    csv_colors = []
+    csv_names = []
+
+    for row in reader_iterator:
+        csv_file_names.append(row[0].strip())
+        csv_colors.append(row[1])
+        csv_names.append(row[2])
+
+    indices = []
+    for file_name in filenames:
+        found_any = False
+        for j in range(len(csv_file_names)):
+            if csv_file_names[j] in file_name:
+                indices.append(j)
+                found_any = True
+                break
+        if not found_any:
+            print('Filename not found: ' + file_name)
+            indices.append(0)
+
+    colors = [csv_colors[i].lstrip('#') for i in indices]
+    colors = [tuple(int(h[i:i+2], 16) / 255 for i in (0, 2, 4)) for h in colors]
+    names = [csv_names[i] for i in indices]
+    
     from dataset import dataset as dataset
     dataset.load_voxels(device)
     voxels = dataset.voxels
 
     STEPS = 6
     
-    indices = random.sample(list(range(dataset.size)), 2)
-    print(indices)
+    # 36 - 42 : crab eating macaque
+    # 14: tufted capuchin
+    # 34: mongoose lemur
+    # 65 : vari noir et blanc / black and white ruffled lemur
+    # 12, 13, 15, 16, 20, 22, 23 : chimpanzee
+    # 57: red slender loris
+    # 29: galago
+    # 61, 62 saimiri
+
+    csv_selection = [19, 16]
+    indices = [indices.index(i-2) for i in csv_selection]
+    color_start = np.array(colors[indices[0]])
+    color_end = np.array(colors[indices[1]])
     
     ae = load_autoencoder(is_variational=False)
-    vae = load_autoencoder(is_variational=True)
 
     print("Generating codes...")
     with torch.no_grad():
-        codes_ae = torch.zeros([STEPS, LATENT_CODE_SIZE], device=device)
         codes_start_end = ae.encode(voxels[indices, :, :, :])
         code_start = codes_start_end[0, :]
-        code_end = codes_start_end[1, :]
-        for i in range(STEPS):
-            codes_ae[i, :] = code_start * (1.0 - i / (STEPS - 1)) + code_end * i / (STEPS - 1)
-        reconstructed_ae = ae.decode(codes_ae)
-        
-        codes_vae = torch.zeros([STEPS, LATENT_CODE_SIZE], device=device)
-        codes_start_end = vae.encode(voxels[indices, :, :, :])
-        code_start = codes_start_end[0, :]
-        code_end = codes_start_end[1, :]
-        for i in range(STEPS):
-            codes_vae[i, :] = code_start * (1.0 - i / (STEPS - 1)) + code_end * i / (STEPS - 1)
-        reconstructed_vae = vae.decode(codes_vae)
+        code_end = codes_start_end[1, :]       
 
-    plot = ImageGrid(STEPS, 2)
+    plot = ImageGrid(STEPS, 1)
     
-    for i in range(STEPS):
-        plot.set_voxels(reconstructed_ae[i, :, :, :], i, 0)
-        plot.set_voxels(reconstructed_vae[i, :, :, :], i, 1)
+    with torch.no_grad():
+        for i in tqdm(range(STEPS)):
+            progress = i / (STEPS - 1)
+            code = code_start * (1.0 - progress) + code_end * progress
+            plot.viewer.model_color = color_start * (1.0 - progress) + color_end * progress
+            plot.set_voxels(ae.decode(code), i, 0)
 
-    plot.save("plots/ae-vae-interpolation.pdf")
+    plot.save("plots/ae-interpolation_{:d}-{:d}.png".format(csv_selection[0], csv_selection[1]))
 
 if "autoencoder_interpolation_2" in sys.argv:
     from dataset import dataset as dataset
