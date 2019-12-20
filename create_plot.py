@@ -88,6 +88,7 @@ def create_tsne_plot(codes, voxels = None, labels = None, filename = "plot.pdf",
     print("Calculating t-sne embedding...")
     tsne = TSNE(n_components=2)
     embedded = tsne.fit_transform(codes)
+    np.save('tsne-embedding.npy', embedded)
     
     print("Plotting...")
     fig, ax = plt.subplots()
