@@ -27,7 +27,7 @@ if SAVE_NIFTI:
 
 with torch.no_grad():
     for i in tqdm(range(dataset.voxels.shape[0])):
-        voxels = autoencoder(dataset.voxels[i, :, :, :])[0].detach().cpu().numpy()
+        voxels = autoencoder(dataset.voxels[i, :, :, :]).detach().cpu().numpy()
 
         if SAVE_NIFTI:
             nibabel_image = nibabel.Nifti1Image(voxels, affine=np.eye(4))
