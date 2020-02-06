@@ -60,7 +60,7 @@ def process_model_file(filename):
     mesh = trimesh.load(filename)
     mesh = scale_to_unit_sphere(mesh, rotation_matrix=ROTATION_HUMAN if is_human else ROTATION)
 
-    mesh_sdf = MeshSDF(mesh, use_scans=True)
+    mesh_sdf = MeshSDF(mesh, use_scans=False)
     if CREATE_SDF_CLOUDS:
         try:
             points, sdf = mesh_sdf.get_sample_points(number_of_points=SDF_CLOUD_SAMPLE_SIZE)
