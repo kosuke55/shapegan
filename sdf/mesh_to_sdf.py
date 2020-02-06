@@ -53,7 +53,7 @@ class MeshSDF:
         else:
             return self.mesh.sample(count)
 
-    def get_sdf(self, query_points, use_depth_buffer=True, sample_count=11):
+    def get_sdf(self, query_points, use_depth_buffer=False, sample_count=11):
         if use_depth_buffer:
             distances, _ = self.kd_tree.query(query_points)
             distances = distances.astype(np.float32).reshape(-1) * -1
