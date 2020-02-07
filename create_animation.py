@@ -24,9 +24,6 @@ progress = np.arange(FRAMES, dtype=float) / TRANSITION_FRAMES
 
 dataset.load_voxels(device)
 
-by_size = open('data/by_size.txt').readlines()
-by_size = [i.strip() for i in by_size]
-
 DIRECTORY_MODELS = 'data/meshes/'
 MODEL_EXTENSION = '.ply'
 
