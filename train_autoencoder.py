@@ -83,6 +83,7 @@ def create_batches():
 #     return torch.sum(wrong_signs).item() / wrong_signs.nelement()
 
 # Boosts the error of voxels with wrong signs, as these influence the Marching Cubes reconstructed surface more.
+# network will put in twice the effort to fix the important errors; here: diff sdf volumes in and learnt 
 def get_reconstruction_loss(input, target):
     difference = input - target
     wrong_signs = (input * target) < 0
@@ -100,6 +101,7 @@ def test(epoch_index, epoch_time):
         "training loss: {:4f}, ".format(reconstruction_loss)
     )
 
+    # log csv file: epoch_index, epoch_time, reconstruction_loss written to csv file; reco loss is the mean of the last epoch
     log_file.write('{:d} {:.1f} {:.6f}\n'.format(epoch_index, epoch_time, reconstruction_loss))
     log_file.flush()
 
@@ -125,8 +127,9 @@ def train():
                 error_history.append(reconstruction_loss.item())
 
                 loss = reconstruction_loss + kld
-                
+                # calc gradient of every variable in network with regard to loss function (pyTorch functionality)
                 loss.backward()
+                # updates network params using these gradients
                 optimizer.step()
 
                 if show_viewer and batch_index == 0:
@@ -145,6 +148,7 @@ def train():
                 return
         autoencoder.save()
         if epoch % 20 == 0:
+            # save copy of network after every 20 steps, to check the training --> output in `models/checkpoints`
             autoencoder.save(epoch=epoch)
         test(epoch, time.time() - epoch_start_time)
 
