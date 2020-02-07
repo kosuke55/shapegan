@@ -1,6 +1,8 @@
 from model import *
 from util import standard_normal_distribution
 
+# determine the number of neurons, here 16; 
+# if it is too small, the network will not be expressive; if it's too big, it will train slower and you run into risk of overfitting (if there are too many neurons)
 AUTOENCODER_MODEL_COMPLEXITY_MULTIPLIER = 16
 amcm = AUTOENCODER_MODEL_COMPLEXITY_MULTIPLIER
 
@@ -12,6 +14,7 @@ class Autoencoder(SavableModule):
         if is_variational:
             self.filename = 'variational-' + self.filename
 
+        # this is for 128 resolution; outchannel has to be same as inchannel; to change res, change the layers! (add one layer in encoder, one in decoder; change 128-->256, and input data sdf vols to 256**)
         self.encoder = nn.Sequential(
             nn.Conv3d(in_channels = 1, out_channels = 1 * amcm, kernel_size = 4, stride = 2, padding = 1),
             nn.BatchNorm3d(1 * amcm),
@@ -105,6 +108,7 @@ class Autoencoder(SavableModule):
             return x
 
     def decode(self, x):
+        # if you put in a single latent code, add empty dimension so it becomes 2D tensor
         if len(x.shape) == 1:
             x = x.unsqueeze(dim = 0)  # add batch dimension
         x = self.decoder(x)
