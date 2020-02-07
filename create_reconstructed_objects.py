@@ -39,7 +39,7 @@ with torch.no_grad():
             size = 2
             spacing = size / voxel_resolution
             try:
-                vertices, faces, normals, _ = skimage.measure.marching_cubes_lewiner(voxels_padded, level=0, spacing=(spacing, spacing, spacing))
+                vertices, faces, normals, _ = skimage.measure.marching_cubes_lewiner(voxels_padded, level=-0.01, spacing=(spacing, spacing, spacing))
             except ValueError:
                 print("No sign changes in the volume. Not creating a mesh for item {:d}".format(i))
                 continue
