@@ -66,7 +66,9 @@ log_file = open("plots/{:s}autoencoder_training.csv".format('variational_' if au
 
 
 def kld_loss(mean, log_variance):
+    # obtain normally distributed latent space
     return -0.5 * torch.sum(1 + log_variance - mean.pow(2) - log_variance.exp()) / mean.nelement()
+    # used in VAE: the Kullback Leibler divergence; will push the distribution of the latent space towards the normal distribution
 
 def create_batches():
     batch_count = int(len(training_indices) / BATCH_SIZE)
@@ -74,6 +76,11 @@ def create_batches():
     for i in range(batch_count - 1):
         yield training_indices[i * BATCH_SIZE:(i+1)*BATCH_SIZE]
     yield training_indices[(batch_count - 1) * BATCH_SIZE:]
+
+# def voxel_difference(input, target):
+#     # calculate difference between learnt by network and ground truth
+#     wrong_signs = (input * target) < 0
+#     return torch.sum(wrong_signs).item() / wrong_signs.nelement()
 
 # Boosts the error of voxels with wrong signs, as these influence the Marching Cubes reconstructed surface more.
 def get_reconstruction_loss(input, target):
@@ -84,6 +91,8 @@ def get_reconstruction_loss(input, target):
     return torch.mean(torch.abs(difference))
 
 criterion = nn.functional.mse_loss
+# criterion = get_reconstruction_loss
+# 32 can be changed to any number
 
 def test(epoch_index, epoch_time):
     reconstruction_loss = np.mean(error_history)
