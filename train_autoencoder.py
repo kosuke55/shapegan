@@ -95,7 +95,7 @@ criterion = nn.functional.mse_loss
 # criterion = get_reconstruction_loss
 # 32 can be changed to any number
 
-def test(epoch_index, epoch_time):
+def print_training_stats(epoch_index, epoch_time):
     reconstruction_loss = np.mean(error_history)
     print("Epoch {:d} ({:.1f}s): ".format(epoch_index, epoch_time) +
         "training loss: {:4f}, ".format(reconstruction_loss)
@@ -150,6 +150,6 @@ def train():
         if epoch % 20 == 0:
             # save copy of network after every 20 steps, to check the training --> output in `models/checkpoints`
             autoencoder.save(epoch=epoch)
-        test(epoch, time.time() - epoch_start_time)
+        print_training_stats(epoch, time.time() - epoch_start_time)
 
 train()
