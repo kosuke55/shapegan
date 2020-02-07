@@ -3,7 +3,7 @@ from util import standard_normal_distribution
 
 # determine the number of neurons, here 16; 
 # if it is too small, the network will not be expressive; if it's too big, it will train slower and you run into risk of overfitting (if there are too many neurons)
-AUTOENCODER_MODEL_COMPLEXITY_MULTIPLIER = 16
+AUTOENCODER_MODEL_COMPLEXITY_MULTIPLIER = 32
 amcm = AUTOENCODER_MODEL_COMPLEXITY_MULTIPLIER
 
 class Autoencoder(SavableModule):
