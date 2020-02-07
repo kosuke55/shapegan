@@ -61,13 +61,9 @@ if show_viewer:
 
 error_history = deque(maxlen = dataset.voxels.shape[0] // BATCH_SIZE)
 
-criterion = nn.functional.mse_loss
 
 log_file = open("plots/{:s}autoencoder_training.csv".format('variational_' if autoencoder.is_variational else ''), "a" if "continue" in sys.argv else "w")
 
-def voxel_difference(input, target):
-    wrong_signs = (input * target) < 0
-    return torch.sum(wrong_signs).item() / wrong_signs.nelement()
 
 def kld_loss(mean, log_variance):
     return -0.5 * torch.sum(1 + log_variance - mean.pow(2) - log_variance.exp()) / mean.nelement()
@@ -79,12 +75,18 @@ def create_batches():
         yield training_indices[i * BATCH_SIZE:(i+1)*BATCH_SIZE]
     yield training_indices[(batch_count - 1) * BATCH_SIZE:]
 
+def voxel_difference(input, target):
+    wrong_signs = (input * target) < 0
+    return torch.sum(wrong_signs).item() / wrong_signs.nelement()
+
 def get_reconstruction_loss(input, target):
     difference = input - target
-    wrong_signs = target < 0
+    wrong_signs = input * target < 0
     difference[wrong_signs] *= 32
 
     return torch.mean(torch.abs(difference))
+
+criterion = nn.functional.mse_loss
 
 def test(epoch_index, epoch_time):
     reconstruction_loss = np.mean(error_history)
@@ -113,7 +115,7 @@ def train():
                     output = autoencoder(sample)
                     kld = 0
 
-                reconstruction_loss = get_reconstruction_loss(output, sample)
+                reconstruction_loss = criterion(output, sample)
                 error_history.append(reconstruction_loss.item())
 
                 loss = reconstruction_loss + kld
