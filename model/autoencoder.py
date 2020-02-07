@@ -106,7 +106,7 @@ class Autoencoder(SavableModule):
 
     def decode(self, x):
         if len(x.shape) == 1:
-            x = x.unsqueeze(dim = 0)  # add dimension for channels
+            x = x.unsqueeze(dim = 0)  # add batch dimension
         x = self.decoder(x)
         return x.squeeze()
 
