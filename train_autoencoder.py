@@ -75,13 +75,10 @@ def create_batches():
         yield training_indices[i * BATCH_SIZE:(i+1)*BATCH_SIZE]
     yield training_indices[(batch_count - 1) * BATCH_SIZE:]
 
-def voxel_difference(input, target):
-    wrong_signs = (input * target) < 0
-    return torch.sum(wrong_signs).item() / wrong_signs.nelement()
-
+# Boosts the error of voxels with wrong signs, as these influence the Marching Cubes reconstructed surface more.
 def get_reconstruction_loss(input, target):
     difference = input - target
-    wrong_signs = input * target < 0
+    wrong_signs = (input * target) < 0
     difference[wrong_signs] *= 32
 
     return torch.mean(torch.abs(difference))
