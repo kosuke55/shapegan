@@ -23,7 +23,6 @@ dataset.load_voxels(device)
 
 
 BATCH_SIZE = 16
-TEST_SPLIT = 0.05
 
 training_indices = list(range(dataset.size))
 
