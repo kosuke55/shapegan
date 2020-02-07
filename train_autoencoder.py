@@ -21,20 +21,37 @@ from dataset import dataset as dataset
 from util import create_text_slice, device
 dataset.load_voxels(device)
 
+# running it with AE: `python3 train_autoencoder.py classic nogui continue`
+# with VAE: `python3 train_autoencoder.py nogui continue`
+# running it for the first time: without `continue` argument
+
 
 BATCH_SIZE = 16
+# number of specimens shown to network at once
+# increase this number to get better result (training more stable), but it takes longer!
+# influences vRAM GPUram! --> if we get ram error, reduce batch size
+# if training is stable, there's no reason to change it; otherwise we can increase as long as we do not run into memory error
 
 training_indices = list(range(dataset.size))
 
 VIEWER_UPDATE_STEP = 20
+# if you have screen, you will see update after 20 steps
 
 IS_VARIATIONAL = 'classic' not in sys.argv
+# to use VAE insteads of AE, do not define this as an argument in the command line --> VAE is default
 
 autoencoder = Autoencoder(is_variational=IS_VARIATIONAL)
 if "continue" in sys.argv:
     autoencoder.load()
 
 optimizer = optim.Adam(autoencoder.parameters(), lr=0.00002)
+# learn rate; now at =0.00002; network uses gradient of error, they are multiplied with the learn rate 
+# --> so if learn rate is very small it will change the network params a little
+# the smaller the number, the more stable the training will be, the longer it will take
+# goal: lr as high as possible without breaking the training process
+# if lr too high: loss value does not get smaller anymore (overshooting: it optimizes in right direction, but will go too far, no descent anymore)
+
+# Adam: adaptive moment optimisziation: there are different optimizers, the one we use is RMSprop; Adam is default; Root means square propagation
 
 show_viewer = "nogui" not in sys.argv
 
