@@ -19,6 +19,9 @@ class VoxelDataset(Dataset):
     def __getitem__(self, index):
         array = np.load(self.files[index])
 
+        if array.dtype == np.float64:
+            array = array.astype(np.float32)
+
         file_name = self.get_file_name(index)
         if file_name.startswith('baboon'):
             array = array.transpose([0, 2, 1])

@@ -3,36 +3,31 @@ from itertools import count
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from datasets import VoxelDataset
+from torch.utils.data import DataLoader
 
 import random
 random.seed(0)
 torch.manual_seed(0)
 
 import numpy as np
-
 import sys
 import time
+from tqdm import tqdm
 
 from model.autoencoder import Autoencoder
-
 from collections import deque
-
-from dataset import dataset as dataset
 from util import create_text_slice, device
-dataset.load_voxels(device)
 
 # running it with AE: `python3 train_autoencoder.py classic nogui continue`
 # with VAE: `python3 train_autoencoder.py nogui continue`
 # running it for the first time: without `continue` argument
-
 
 BATCH_SIZE = 16
 # number of specimens shown to network at once
 # increase this number to get better result (training more stable), but it takes longer!
 # influences vRAM GPUram! --> if we get ram error, reduce batch size
 # if training is stable, there's no reason to change it; otherwise we can increase as long as we do not run into memory error
-
-training_indices = list(range(dataset.size))
 
 VIEWER_UPDATE_STEP = 20
 # if you have screen, you will see update after 20 steps
@@ -53,13 +48,17 @@ optimizer = optim.Adam(autoencoder.parameters(), lr=0.00002)
 
 # Adam: adaptive moment optimisziation: there are different optimizers, the one we use is RMSprop; Adam is default; Root means square propagation
 
+
+dataset = VoxelDataset.glob('data/sdf-volumes/**/*.npy')
+data_loader = DataLoader(dataset, shuffle=True, batch_size=BATCH_SIZE, num_workers=8)
+
 show_viewer = "nogui" not in sys.argv
 
 if show_viewer:
     from rendering import MeshRenderer
     viewer = MeshRenderer()
 
-error_history = deque(maxlen = dataset.voxels.shape[0] // BATCH_SIZE)
+error_history = deque(maxlen=len(dataset) // BATCH_SIZE)
 
 
 log_file = open("plots/{:s}autoencoder_training.csv".format('variational_' if autoencoder.is_variational else ''), "a" if "continue" in sys.argv else "w")
@@ -70,18 +69,11 @@ def kld_loss(mean, log_variance):
     return -0.5 * torch.sum(1 + log_variance - mean.pow(2) - log_variance.exp()) / mean.nelement()
     # used in VAE: the Kullback Leibler divergence; will push the distribution of the latent space towards the normal distribution
 
-def create_batches():
-    batch_count = int(len(training_indices) / BATCH_SIZE)
-    random.shuffle(training_indices)
-    for i in range(batch_count - 1):
-        yield training_indices[i * BATCH_SIZE:(i+1)*BATCH_SIZE]
-    yield training_indices[(batch_count - 1) * BATCH_SIZE:]
-
 # def voxel_difference(input, target):
 #     # calculate difference between learnt by network and ground truth
 #     wrong_signs = (input * target) < 0
-#     return torch.sum(wrong_signs).item() / wrong_signs.nelement()
 
+#     return torch.sum(wrong_signs).item() / wrong_signs.nelement()
 # Boosts the error of voxels with wrong signs, as these influence the Marching Cubes reconstructed surface more.
 # network will put in twice the effort to fix the important errors; here: diff sdf volumes in and learnt 
 def get_reconstruction_loss(input, target):
@@ -109,21 +101,20 @@ def train():
     for epoch in count():
         batch_index = 0
         epoch_start_time = time.time()
-        for batch in create_batches():
+        for batch in tqdm(data_loader, desc='Epoch {:d}'.format(epoch)):
             try:
-                indices = torch.tensor(batch, device=device)
-                sample = dataset.voxels[indices, :, :, :]
+                batch = batch.to(device)
 
                 autoencoder.zero_grad()
                 autoencoder.train()
                 if IS_VARIATIONAL:
-                    output, mean, log_variance = autoencoder(sample)
+                    output, mean, log_variance = autoencoder(batch)
                     kld = kld_loss(mean, log_variance)
                 else:
-                    output = autoencoder(sample)
+                    output = autoencoder(batch)
                     kld = 0
 
-                reconstruction_loss = criterion(output, sample)
+                reconstruction_loss = criterion(output, batch)
                 error_history.append(reconstruction_loss.item())
 
                 loss = reconstruction_loss + kld
@@ -138,9 +129,7 @@ def train():
                 if show_viewer and (batch_index + 1) % VIEWER_UPDATE_STEP == 0 and 'verbose' in sys.argv:
                     viewer.set_voxels(output[0, :, :, :].squeeze().detach().cpu().numpy())
                     print("epoch " + str(epoch) + ", batch " + str(batch_index) \
-                        + ', reconstruction loss: {0:.4f}'.format(reconstruction_loss.item()) \
-                        + ' (average: {0:.4f}), '.format(sum(error_history) / len(error_history)) \
-                        + 'KLD loss: {0:.4f}'.format(kld))
+                        + ', reconstruction loss: {0:.4f}'.format(reconstruction_loss.item()))
                 batch_index += 1
             except KeyboardInterrupt:
                 if show_viewer:
