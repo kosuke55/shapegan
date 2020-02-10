@@ -11,9 +11,10 @@ import sys
 
 from rendering import MeshRenderer
 from model.autoencoder import Autoencoder, LATENT_CODE_SIZE
-from dataset import dataset as dataset
 from util import device
-dataset.load_voxels(device)
+from datasets import VoxelDataset
+
+dataset = VoxelDataset.glob('data/sdf-volumes/**/*.npy')
 
 autoencoder = Autoencoder(is_variational='classic' not in sys.argv)
 autoencoder.load()
@@ -32,8 +33,8 @@ SAMPLE_FROM_LATENT_DISTRIBUTION = 'sample' in sys.argv
 
 def get_latent_distribution():
     print("Calculating latent distribution...")
-    indices = random.sample(list(range(dataset.size)), 1000)
-    voxels = dataset.voxels[indices, :, :, :]
+    indices = random.sample(list(range(len(dataset))), min(1000, len(dataset)))
+    voxels = torch.stack([dataset[i] for i in indices]).to(device)
     with torch.no_grad():
         codes = autoencoder.encode(voxels)
     latent_codes_flattened = codes.detach().cpu().numpy().reshape(-1)
@@ -49,17 +50,17 @@ def get_random():
     if SAMPLE_FROM_LATENT_DISTRIBUTION:
         return latent_distribution.sample(sample_shape=SHAPE).to(device)
     else:
-        index = random.randint(0, dataset.size -1)
-        return autoencoder.encode(dataset.voxels[index, :, :, :])
+        index = random.randint(0, len(dataset) -1)
+        return autoencoder.encode(dataset[index].to(device))
 
 
 previous_model = None
-next_model = autoencoder.encode(dataset.voxels[0, :, :, :])
+next_model = get_random()
 
-for i in range(1, dataset.voxels.shape[0]):
+for epoch in count():
     try:
         previous_model = next_model
-        next_model = autoencoder.encode(dataset.voxels[i, :, :, :])
+        next_model = get_random()
 
         start = time.perf_counter()
         end = start + TRANSITION_TIME
