@@ -45,5 +45,8 @@ with torch.no_grad():
                 continue
             
             vertices -= size / 2
+            
             mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_normals=normals)
-            mesh.export('data/reconstructed/{:04d}.ply'.format(i))
+            ply_bytes = trimesh.exchange.ply.export_ply(mesh, encoding='ascii')
+            with open('data/reconstructed/{:04d}.ply'.format(i), 'wb') as ply_file:
+                ply_file.write(ply_bytes)
