@@ -45,8 +45,7 @@ class VoxelDataset(Dataset):
         import glob
         files = glob.glob(pattern, recursive=True)
         if len(files) == 0:
-            raise Exception(
-                'No files found for glob pattern {:s}.'.format(pattern))
+            raise Exception('No files found for glob pattern {:s}.'.format(pattern))
         return VoxelDataset(sorted(files))
 
     def show(self):

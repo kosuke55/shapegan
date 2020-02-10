@@ -1,13 +1,10 @@
 import torch
 import numpy as np
 from model.autoencoder import Autoencoder
-from dataset import dataset as dataset
 from util import device, ensure_directory
 from tqdm import tqdm
 import os
-
-
-dataset.load_voxels(device)
+from datasets import VoxelDataset
 
 autoencoder = Autoencoder(is_variational=False)
 autoencoder.load()
@@ -25,9 +22,11 @@ if SAVE_PLY:
 if SAVE_NIFTI:
     import nibabel
 
+dataset = VoxelDataset.glob('data/sdf-volumes/**/*.npy')
+
 with torch.no_grad():
-    for i in tqdm(range(dataset.voxels.shape[0])):
-        voxels = autoencoder(dataset.voxels[i, :, :, :]).detach().cpu().numpy()
+    for i in tqdm(range(len(dataset))):
+        voxels = autoencoder(dataset[i].to(device)).cpu().numpy()
 
         if SAVE_NIFTI:
             nibabel_image = nibabel.Nifti1Image(voxels, affine=np.eye(4))
