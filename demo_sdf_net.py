@@ -1,6 +1,5 @@
 from model.sdf_net import SDFNet, LATENT_CODE_SIZE, LATENT_CODES_FILENAME
 from util import device, standard_normal_distribution, ensure_directory
-from dataset import dataset
 import scipy
 import numpy as np
 from rendering import MeshRenderer
@@ -16,7 +15,6 @@ TRANSITION_FRAMES = 60
 
 ROTATE_MODEL = False
 USE_HYBRID_GAN = False
-CATEGORY = None # Limit category when using the DeepSDF autodecoder, set to None to use all categories
 
 SURFACE_LEVEL = 0 #0.048 if USE_HYBRID_GAN else 0.02
 
@@ -37,8 +35,6 @@ def create_image_sequence():
     ensure_directory('images')
     frame_index = 0
     viewer = MeshRenderer(size=1080, start_thread=False)
-    if CATEGORY is not None:
-        viewer.model_color = dataset.get_color(CATEGORY)
     progress_bar = tqdm(total=SAMPLE_COUNT * TRANSITION_FRAMES)
 
     for sample_index in range(SAMPLE_COUNT):
@@ -58,9 +54,6 @@ def create_image_sequence():
 def show_models():
     TRANSITION_TIME = 2
     viewer = MeshRenderer()
-
-    if CATEGORY is not None:
-        viewer.model_color = dataset.get_color(CATEGORY)
 
     while True:
         for sample_index in range(SAMPLE_COUNT):
