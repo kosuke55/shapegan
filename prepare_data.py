@@ -2,7 +2,7 @@ import os
 import trimesh
 from tqdm import tqdm
 import numpy as np
-from sdf.mesh_to_sdf import MeshSDF, scale_to_unit_sphere, BadMeshException
+from mesh_to_sdf import get_surface_point_cloud, scale_to_unit_sphere, BadMeshException
 from util import ensure_directory
 from multiprocessing import Pool
 from scipy.spatial.transform import Rotation
@@ -17,8 +17,12 @@ VOXEL_RESOLUTION = 128
 CREATE_SDF_CLOUDS = False
 SDF_CLOUD_SAMPLE_SIZE = 200000
 
-ROTATION = np.matmul(Rotation.from_euler('x', 90, degrees=True).as_dcm(), Rotation.from_euler('z', 180, degrees=True).as_dcm())
-ROTATION_HUMAN = np.matmul(Rotation.from_euler('x', -90, degrees=True).as_dcm(), Rotation.from_euler('z', 180, degrees=True).as_dcm())
+ROTATION = np.eye(4)
+ROTATION[:3, :3] = np.matmul(Rotation.from_euler('x', 90, degrees=True).as_dcm(), Rotation.from_euler('z', 180, degrees=True).as_dcm())
+ROTATION_HUMAN = np.eye(4)
+ROTATION_HUMAN[:3, :3] = np.matmul(Rotation.from_euler('x', -90, degrees=True).as_dcm(), Rotation.from_euler('z', 180, degrees=True).as_dcm())
+
+# TODO the values of these rotations seem to be incorrect
 
 def get_model_files():
     for directory, _, files in os.walk(DIRECTORY_MODELS):
@@ -58,27 +62,31 @@ def process_model_file(filename):
     is_human = 'CMU_' in filename or 'KKI_' in filename or 'Caltech_' in filename or 'Leuven_' in filename or 'PE0' in filename
 
     mesh = trimesh.load(filename)
-    mesh = scale_to_unit_sphere(mesh, rotation_matrix=ROTATION_HUMAN if is_human else ROTATION)
+    if is_human:
+        mesh.apply_transform(ROTATION_HUMAN)
+    else:
+        mesh.apply_transform(ROTATION)
+    mesh = scale_to_unit_sphere(mesh)
 
-    mesh_sdf = MeshSDF(mesh, use_scans=False)
+    mesh_sdf = get_surface_point_cloud(mesh, surface_point_method='sample', bounding_radius=1)
     if CREATE_SDF_CLOUDS:
         try:
-            points, sdf = mesh_sdf.get_sample_points(number_of_points=SDF_CLOUD_SAMPLE_SIZE)
+            points, sdf = mesh_sdf.sample_sdf_near_surface(number_of_points=SDF_CLOUD_SAMPLE_SIZE, min_size=0.015)
             combined = np.concatenate((points, sdf[:, np.newaxis]), axis=1)
             ensure_directory(os.path.dirname(sdf_cloud_filename))
             np.save(sdf_cloud_filename, combined)
         except BadMeshException:
-            tqdm.write("Skipping bad mesh. ({:s})".format(filename))
+            tqdm.write("Skipping bad mesh (too small). ({:s})".format(filename))
             mark_bad_mesh(filename)
             return
 
     if CREATE_VOXELS:
         try:
-            voxels = mesh_sdf.get_voxel_sdf(voxel_resolution=VOXEL_RESOLUTION)
+            voxels = mesh_sdf.get_voxels(voxel_resolution=VOXEL_RESOLUTION, check_result=False)
             ensure_directory(os.path.dirname(voxels_filename))
             np.save(voxels_filename, voxels)
         except BadMeshException:
-            tqdm.write("Skipping bad mesh. ({:s})".format(filename))
+            tqdm.write("Skipping bad mesh (bad voxels). ({:s})".format(filename))
             mark_bad_mesh(filename)
             return
 
@@ -86,23 +94,8 @@ def process_model_file(filename):
 def process_model_files():
     ensure_directory(DIRECTORY_SDF)
     files = list(get_model_files())
-
-    '''from rendering import MeshRenderer
-    viewer = MeshRenderer()
-
-    for filename in files:
-        is_human = 'CMU_' in filename or 'KKI_' in filename or 'Caltech_' in filename or 'Leuven_' in filename or 'PE0' in filename
-
-        mesh = trimesh.load(filename)
-        mesh = scale_to_unit_sphere(mesh, rotation_matrix=ROTATION_HUMAN if is_human else ROTATION)
-        print(filename)
-        viewer.set_mesh(mesh)
-        viewer.model_color = (0.8, 0.0, 0.0) if is_human else (1.0, 0.5, 0.5)
-        import time
-        time.sleep(1)
-    '''
     
-    worker_count = os.cpu_count()
+    worker_count = 4
     print("Using {:d} processes.".format(worker_count))
     pool = Pool(worker_count)
 
