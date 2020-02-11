@@ -2,6 +2,7 @@ import torch
 from torch.utils.data import Dataset
 import os
 import numpy as np
+import random
 
 class VoxelDataset(Dataset):
     def __init__(self, files, clamp=10, rescale_sdf=True):
@@ -106,6 +107,49 @@ class CSVVoxelDataset(VoxelDataset):
             viewer.model_color = (int(color[3:5], 16) / 255, int(color[5:7], 16) / 255, int(color[7:], 16) / 255)
             tqdm.write('Showing a {:s} from file "{:s}"'.format(self.rows[index][2], self.files[index]))
             time.sleep(0.5)
+
+# This dataset is balanced so that samples from each category are used at the same frequency.
+# The .shuffle() method should be called after each epoch.
+class BalancedDataset(Dataset):
+    def __init__(self, base_dataset):
+        self.base_dataset = base_dataset
+
+        self.indices_by_category = {}
+
+        def get_category(index):
+            return base_dataset.rows[index][2] # DisplayName
+
+        for index in range(len(base_dataset)):
+            category = get_category(index)
+            if category not in self.indices_by_category:
+                self.indices_by_category[category] = []
+            self.indices_by_category[category].append(index)
+
+        self.number_of_items_per_category = len(base_dataset) // len(self.indices_by_category.keys())
+
+        self.shuffle()
+    
+    def shuffle(self):
+        indices = []
+        for category in self.indices_by_category.keys():
+            category_indices = self.indices_by_category[category]
+
+            for _ in range(self.number_of_items_per_category // len(category_indices)):
+                indices.extend(category_indices)
+
+            indices.extend(random.sample(category_indices, self.number_of_items_per_category % len(category_indices)))
+
+        random.shuffle(indices)
+        self.indices = indices
+
+    def __len__(self):
+        return len(self.indices)
+    
+    def __getitem__(self, index):
+        return self.base_dataset[self.indices[index]]
+
+    def get_row(self, index):
+        return self.base_dataset.rows[self.indices[index]]
 
 
 if __name__ == '__main__':
