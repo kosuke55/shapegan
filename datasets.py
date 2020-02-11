@@ -108,6 +108,9 @@ class CSVVoxelDataset(VoxelDataset):
             tqdm.write('Showing a {:s} from file "{:s}"'.format(self.rows[index][2], self.files[index]))
             time.sleep(0.5)
 
+    def get_row(self, index):
+        return self.rows[index]
+
 # This dataset is balanced so that samples from each category are used at the same frequency.
 # The .shuffle() method should be called after each epoch.
 class BalancedDataset(Dataset):
@@ -149,7 +152,7 @@ class BalancedDataset(Dataset):
         return self.base_dataset[self.indices[index]]
 
     def get_row(self, index):
-        return self.base_dataset.rows[self.indices[index]]
+        return self.base_dataset.get_row(self.indices[index])
 
 
 if __name__ == '__main__':
