@@ -3,7 +3,7 @@ from itertools import count
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from datasets import VoxelDataset
+from datasets import *
 from torch.utils.data import DataLoader
 
 import random
@@ -49,8 +49,13 @@ optimizer = optim.Adam(autoencoder.parameters(), lr=0.00002)
 # Adam: adaptive moment optimisziation: there are different optimizers, the one we use is RMSprop; Adam is default; Root means square propagation
 
 
+# Enable one of the following datasets.
+# The VoxelDataset.glob command will load all .npy files that match the glob pattern.
+# The CSVVoxelDataset will only load files with matching lines in the supplied CSV file and provide metadata for them.
 dataset = VoxelDataset.glob('data/sdf-volumes/**/*.npy')
-data_loader = DataLoader(dataset, shuffle=True, batch_size=BATCH_SIZE, num_workers=8)
+# dataset = CSVVoxelDataset('data/color-name-volume-mapping-bc-primates.csv', 'data/sdf-volumes/**/*.npy')
+
+data_loader = DataLoader(dataset, shuffle=True, batch_size=BATCH_SIZE, num_workers=8, drop_last=True)
 
 show_viewer = "nogui" not in sys.argv
 
@@ -60,6 +65,12 @@ if show_viewer:
 
 error_history = deque(maxlen=len(dataset) // BATCH_SIZE)
 
+# If true, the first element of the latent code will be used to encode the volume.
+# In this case, the network no longer needs to infer volume information as that is supplied to it.
+# However, we hope that it will learn a representation where volume is disentangled from the remaining latent
+# information and we will be able to change the volume parameter while keeping everything else.
+# If true, the dataset above needs to be a CSVVoxelDataset or a BalancedDataset
+USE_VOLUME_NEURON = False
 
 log_file = open("plots/{:s}autoencoder_training.csv".format('variational_' if autoencoder.is_variational else ''), "a" if "continue" in sys.argv else "w")
 
@@ -106,13 +117,16 @@ def train():
                 voxels, meta = batch
                 voxels = voxels.to(device)
 
+                if USE_VOLUME_NEURON:
+                    volume_data = [float(v) for v in meta[4]]
+
                 autoencoder.zero_grad()
                 autoencoder.train()
                 if IS_VARIATIONAL:
-                    output, mean, log_variance = autoencoder(voxels)
+                    output, mean, log_variance = autoencoder(voxels, volume = volume_data if USE_VOLUME_NEURON else None)
                     kld = kld_loss(mean, log_variance)
                 else:
-                    output = autoencoder(voxels)
+                    output = autoencoder(voxels, volume = volume_data if USE_VOLUME_NEURON else None)
                     kld = 0
 
                 reconstruction_loss = criterion(output, voxels)

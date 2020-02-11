@@ -83,11 +83,13 @@ class Autoencoder(SavableModule):
         )
         self.cuda()
 
-    def encode(self, x, return_mean_and_log_variance = False):
+    def encode(self, x, return_mean_and_log_variance = False, volume=None):
         x = x.reshape((-1, 1, 128, 128, 128))
         x = self.encoder(x)
 
         if not self.is_variational:
+            if volume is not None:
+                x[:, 0] = torch.tensor(volume, dtype=torch.float32).to(x.device)
             return x
 
         mean = self.encode_mean(x).squeeze()
@@ -102,6 +104,9 @@ class Autoencoder(SavableModule):
         else:
             x = mean
 
+        if volume is not None:
+            x[:, 0] = torch.tensor(volume, dtype=torch.float32).to(x.device)
+
         if return_mean_and_log_variance:
             return x, mean, log_variance
         else:
@@ -114,12 +119,14 @@ class Autoencoder(SavableModule):
         x = self.decoder(x)
         return x.squeeze()
 
-    def forward(self, x):
+    def forward(self, x, volume=None):
         if not self.is_variational:
-            z = self.encode(x)
+            z = self.encode(x, volume=volume)
+            print(z[0, :])
             x = self.decode(z)
             return x
 
-        z, mean, log_variance = self.encode(x, return_mean_and_log_variance = True)
+        z, mean, log_variance = self.encode(x, return_mean_and_log_variance = True, volume=volume)
+
         x = self.decode(z)
         return x, mean, log_variance
