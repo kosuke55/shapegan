@@ -75,11 +75,15 @@ class CSVVoxelDataset(VoxelDataset):
         used_rows = []
 
         for row in csv_rows:
+            found_matching_file = False
             for file_name in file_names:
                 if os.path.basename(file_name) == row[0] + '.npy':
                     used_rows.append(row)
                     used_file_names.append(file_name)
+                    found_matching_file = True
                     break
+            if not found_matching_file:
+                print('Warning: Could not find a .npy for the specimen ID "{:s}". Skipping this line.'.format(row[0]))
         
         if len(used_rows) == 0:
             raise ValueError('Found no .npy files with matching specimen IDs in the CSV file (out of {:d} rows in the CSV file and {:d} .npy files found.'.format(len(rows), len(file_names)))
