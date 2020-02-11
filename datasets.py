@@ -87,6 +87,21 @@ class CSVVoxelDataset(VoxelDataset):
         self.rows = used_rows
 
         VoxelDataset.__init__(self, used_file_names)
+    
+    def show(self):
+        from rendering import MeshRenderer
+        import time
+        from tqdm import tqdm
+        import pygame
+
+        viewer = MeshRenderer()
+        for index in tqdm(range(len(self))):
+            pygame.display.set_caption(self.rows[index][2])
+            color = self.rows[index][1]
+            viewer.set_voxels(self[index].numpy())
+            viewer.model_color = (int(color[3:5], 16) / 255, int(color[5:7], 16) / 255, int(color[7:], 16) / 255)
+            tqdm.write('Showing a {:s} from file "{:s}"'.format(self.rows[index][2], self.files[index]))
+            time.sleep(0.5)
 
 
 if __name__ == '__main__':

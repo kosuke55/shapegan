@@ -128,7 +128,7 @@ class MeshRenderer():
                     normals = np.repeat(normals, 3, axis=0)
 
                 self._update_buffers(vertices.reshape((-1)), normals.reshape((-1)))
-                self.model_size = 1.4
+                self.model_size = 1.1
             except ValueError:
                 pass # Voxel array contains no sign change
         else:
