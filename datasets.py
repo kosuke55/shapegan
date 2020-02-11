@@ -58,7 +58,39 @@ class VoxelDataset(Dataset):
             viewer.set_voxels(item.numpy())
             time.sleep(0.5)
 
+# Voxel dataset of individual .npy files that uses a CSV file to get metadata for the specimen
+class CSVVoxelDataset(VoxelDataset):
+    def __init__(self, csv_file_name, voxel_file_glob_pattern):
+        import csv
+        with open(csv_file_name, 'r') as csv_file:
+            csv_reader = csv.reader(csv_file)
+            csv_iterator = iter(csv_reader)
+            next(csv_iterator)
+            csv_rows = list(csv_iterator)
+
+        import glob
+        file_names = glob.glob(voxel_file_glob_pattern, recursive=True)
+
+        used_file_names = []
+        used_rows = []
+
+        for row in csv_rows:
+            for file_name in file_names:
+                if os.path.basename(file_name) == row[0] + '.npy':
+                    used_rows.append(row)
+                    used_file_names.append(file_name)
+                    break
+        
+        if len(used_rows) == 0:
+            raise ValueError('Found no .npy files with matching specimen IDs in the CSV file (out of {:d} rows in the CSV file and {:d} .npy files found.'.format(len(rows), len(file_names)))
+
+        self.rows = used_rows
+
+        VoxelDataset.__init__(self, used_file_names)
+
 
 if __name__ == '__main__':
-    dataset = VoxelDataset.glob('data/sdf-volumes/**/*.npy')
+    #dataset = VoxelDataset.glob('data/sdf-volumes/**/*.npy')
+    dataset = CSVVoxelDataset('data/color-name-volume-mapping-bc-primates.csv', 'data/sdf-volumes/**/*.npy')
+    
     dataset.show()
