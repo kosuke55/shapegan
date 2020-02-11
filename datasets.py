@@ -39,7 +39,7 @@ class VoxelDataset(Dataset):
             result.clamp_(-self.clamp, self.clamp)
             if self.rescale_sdf:
                 result /= self.clamp
-        return result
+        return (result, [])
 
     @staticmethod
     def glob(pattern):
@@ -56,7 +56,8 @@ class VoxelDataset(Dataset):
 
         viewer = MeshRenderer()
         for item in tqdm(self):
-            viewer.set_voxels(item.numpy())
+            voxels, _ = item
+            viewer.set_voxels(voxels.numpy())
             time.sleep(0.5)
 
 # Voxel dataset of individual .npy files that uses a CSV file to get metadata for the specimen
@@ -79,7 +80,7 @@ class CSVVoxelDataset(VoxelDataset):
             found_matching_file = False
             for file_name in file_names:
                 if os.path.basename(file_name) == row[0] + '.npy':
-                    used_rows.append(row)
+                    used_rows.append(row + [file_name])
                     used_file_names.append(file_name)
                     found_matching_file = True
                     break
@@ -87,11 +88,15 @@ class CSVVoxelDataset(VoxelDataset):
                 print('Warning: Could not find a .npy for the specimen ID "{:s}". Skipping this line.'.format(row[0]))
         
         if len(used_rows) == 0:
-            raise ValueError('Found no .npy files with matching specimen IDs in the CSV file (out of {:d} rows in the CSV file and {:d} .npy files found.'.format(len(rows), len(file_names)))
+            raise ValueError('Found no .npy files with matching specimen IDs in the CSV file (out of {:d} rows in the CSV file and {:d} .npy files found.'.format(len(csv_rows), len(file_names)))
 
         self.rows = used_rows
 
         VoxelDataset.__init__(self, used_file_names)
+
+    def __getitem__(self, index):
+        voxels, _ = VoxelDataset.__getitem__(self, index)
+        return (voxels, self.rows[index])
     
     def show(self):
         from rendering import MeshRenderer
@@ -100,12 +105,13 @@ class CSVVoxelDataset(VoxelDataset):
         import pygame
 
         viewer = MeshRenderer()
-        for index in tqdm(range(len(self))):
-            pygame.display.set_caption(self.rows[index][2])
-            color = self.rows[index][1]
-            viewer.set_voxels(self[index].numpy())
+        for item in tqdm(self):
+            voxels, meta = item
+            pygame.display.set_caption(meta[2])
+            color = meta[1]
+            viewer.set_voxels(voxels.numpy())
             viewer.model_color = (int(color[3:5], 16) / 255, int(color[5:7], 16) / 255, int(color[7:], 16) / 255)
-            tqdm.write('Showing a {:s} from file "{:s}"'.format(self.rows[index][2], self.files[index]))
+            tqdm.write('Showing a {:s} from file "{:s}"'.format(meta[2], meta[-1]))
             time.sleep(0.5)
 
     def get_row(self, index):

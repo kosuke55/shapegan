@@ -33,8 +33,8 @@ SAMPLE_FROM_LATENT_DISTRIBUTION = 'sample' in sys.argv
 
 def get_latent_distribution():
     print("Calculating latent distribution...")
-    indices = random.sample(list(range(len(dataset))), min(1000, len(dataset)))
-    voxels = torch.stack([dataset[i] for i in indices]).to(device)
+    indices = random.sample(list(range(len(dataset))), min(100, len(dataset)))
+    voxels = torch.stack([dataset[i][0] for i in indices]).to(device)
     with torch.no_grad():
         codes = autoencoder.encode(voxels)
     latent_codes_flattened = codes.detach().cpu().numpy().reshape(-1)
@@ -51,7 +51,7 @@ def get_random():
         return latent_distribution.sample(sample_shape=SHAPE).to(device)
     else:
         index = random.randint(0, len(dataset) -1)
-        return autoencoder.encode(dataset[index].to(device))
+        return autoencoder.encode(dataset[index][0].to(device))
 
 
 previous_model = None

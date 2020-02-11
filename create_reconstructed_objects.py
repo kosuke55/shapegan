@@ -25,8 +25,10 @@ if SAVE_NIFTI:
 dataset = VoxelDataset.glob('data/sdf-volumes/**/*.npy')
 
 with torch.no_grad():
-    for i in tqdm(range(len(dataset))):
-        voxels = autoencoder(dataset[i].to(device)).cpu().numpy()
+    i = 0
+    for item in tqdm(dataset):
+        voxels, meta = item
+        voxels = autoencoder(voxels.to(device)).cpu().numpy()
 
         if SAVE_NIFTI:
             nibabel_image = nibabel.Nifti1Image(voxels, affine=np.eye(4))
@@ -49,3 +51,5 @@ with torch.no_grad():
             ply_bytes = trimesh.exchange.ply.export_ply(mesh, encoding='ascii')
             with open('data/reconstructed/{:04d}.ply'.format(i), 'wb') as ply_file:
                 ply_file.write(ply_bytes)
+        
+        i += 1

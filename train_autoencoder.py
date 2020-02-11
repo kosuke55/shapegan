@@ -103,18 +103,19 @@ def train():
         epoch_start_time = time.time()
         for batch in tqdm(data_loader, desc='Epoch {:d}'.format(epoch)):
             try:
-                batch = batch.to(device)
+                voxels, meta = batch
+                voxels = voxels.to(device)
 
                 autoencoder.zero_grad()
                 autoencoder.train()
                 if IS_VARIATIONAL:
-                    output, mean, log_variance = autoencoder(batch)
+                    output, mean, log_variance = autoencoder(voxels)
                     kld = kld_loss(mean, log_variance)
                 else:
-                    output = autoencoder(batch)
+                    output = autoencoder(voxels)
                     kld = 0
 
-                reconstruction_loss = criterion(output, batch)
+                reconstruction_loss = criterion(output, voxels)
                 error_history.append(reconstruction_loss.item())
 
                 loss = reconstruction_loss + kld
