@@ -224,66 +224,37 @@ if "autodecoder-classes" in sys.argv:
     plot.save("plots/deepsdf-reconstruction-classes.pdf")
 
 if "autoencoder" in sys.argv:
-    from dataset import dataset as dataset
-    import csv
+    from datasets import CSVVoxelDataset
+    from torch.utils.data import DataLoader
+    dataset = CSVVoxelDataset('data/color-name-volume-mapping-bc-primates.csv', 'data/sdf-volumes/**/*.npy')
+
+    colors = dataset.get_colors()
+    names = [dataset.get_row(i)[2] for i in range(len(dataset))]
     
-    by_size = open('data/by_size.txt').readlines()
-    by_size = [i.strip() for i in by_size]
+    autoencoder = load_autoencoder(is_variational=False)
     
-    DIRECTORY_MODELS = 'data/meshes/'
-    MODEL_EXTENSION = '.ply'
+    data_loader = DataLoader(dataset, shuffle=False, batch_size=16, num_workers=8)
 
-    def get_model_files():
-        for directory, _, files in os.walk(DIRECTORY_MODELS):
-            for filename in files:
-                if filename.endswith(MODEL_EXTENSION):
-                    yield os.path.join(directory, filename)
-    filenames = sorted(list(get_model_files()))
+    USE_VOLUME_NEURON = False
+
+    codes = np.zeros((len(dataset), LATENT_CODE_SIZE))
+    reconstructed = np.zeros((len(dataset), 128, 128, 128))
     
-    file = open('data/color-name-mapping.csv', 'r')
-    reader = csv.reader(file)
-    reader_iterator = iter(reader)
-    column_names = next(reader_iterator)
-
-    csv_file_names = []
-    csv_colors = []
-    csv_names = []
-
-    for row in reader_iterator:
-        csv_file_names.append(row[0].strip())
-        csv_colors.append(row[1])
-        csv_names.append(row[2])
-
-    indices = []
-    for file_name in filenames:
-        found_any = False
-        for j in range(len(csv_file_names)):
-            if csv_file_names[j] in file_name:
-                indices.append(j)
-                found_any = True
-                break
-        if not found_any:
-            print('Filename not found: ' + file_name)
-            indices.append(0)
-
-    colors = [csv_colors[i].lstrip('#') for i in indices]
-    colors = [tuple(int(h[i:i+2], 16) / 255 for i in (0, 2, 4)) for h in colors]
-    names = [csv_names[i] for i in indices]
-
-    dataset.load_voxels(device)
-    voxels = dataset.voxels
-    autoencoder = load_autoencoder(is_variational='classic' not in sys.argv)
-    print("Generating codes...")
-    codes = np.zeros((voxels.shape[0], LATENT_CODE_SIZE))
     with torch.no_grad():
-        for i in tqdm(range(voxels.shape[0])):
-            codes[i, :] = autoencoder.encode(voxels[i, :, :, :]).cpu().numpy()
+        p = 0
+        for batch in tqdm(data_loader, desc='Processing volumes'):
+            voxels, meta = batch
 
-    reconstructed = np.zeros(voxels.shape)
-    with torch.no_grad():
-        for i in tqdm(range(voxels.shape[0])):
-            reconstructed[i, :, :, :] = autoencoder.decode(autoencoder.encode((voxels[i, :, :, :]))).detach().cpu().numpy()
-    create_tsne_plot(codes, voxels=reconstructed, filename="plots/{:s}autoencoder-tsne.svg".format('' if 'classic' in sys.argv else 'variational-'), colors=colors, names=names)
+            if USE_VOLUME_NEURON:
+                volume_data = [float(v) for v in meta[4]]
+            
+            batch_latent_codes = autoencoder.encode(voxels.to(device), volume=volume_data if USE_VOLUME_NEURON else None)
+
+            codes[p:p+batch_latent_codes.shape[0], :] = batch_latent_codes.cpu().numpy()
+            reconstructed[p:p+batch_latent_codes.shape[0], :, :, :] = autoencoder.decode(batch_latent_codes).cpu().numpy()
+            p += batch_latent_codes.shape[0]
+
+    create_tsne_plot(codes, voxels=reconstructed, filename="plots/autoencoder-tsne.svg", colors=colors, names=names)
 
 if "autodecoder_tsne" in sys.argv:
     from model.sdf_net import LATENT_CODES_FILENAME

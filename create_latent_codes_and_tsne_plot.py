@@ -24,8 +24,8 @@ USE_VOLUME_NEURON = False
 LATENT_CODES_FILENAME = 'data/latent_codes.npy'
 LATENT_CODES_TSNE_FILENAME = 'data/latent_codes_tsne.npy'
 
-ensure_directory('plot')
-TSNE_FIGURE_FILENAME = 'plot/tsne.pdf'
+ensure_directory('plots')
+TSNE_FIGURE_FILENAME = 'plots/tsne.pdf'
 
 latent_codes = np.zeros((len(dataset), LATENT_CODE_SIZE))
 
