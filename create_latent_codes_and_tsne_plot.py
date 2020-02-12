@@ -58,13 +58,6 @@ print('Saved tsne-embedded latent codes to {:s}.'.format(LATENT_CODES_TSNE_FILEN
 
 ### Plot
 
-colors = np.zeros((len(dataset), 3))
-for i in range(len(dataset)):
-    color = dataset.get_row(i)[1]
-    colors[i, 0] = int(color[3:5], 16) / 255
-    colors[i, 1] = int(color[5:7], 16) / 255
-    colors[i, 2] = int(color[7:], 16) / 255
-
 sizes = np.array([float(dataset.get_row(i)[4]) for i in range(len(dataset))])
 sizes = np.power(sizes, 1/3)
 sizes = sizes / np.max(sizes) * 60
@@ -73,7 +66,7 @@ size_inches = 6
 fig, ax = plt.subplots(1, figsize=(size_inches, size_inches))
 plt.axis('off')
 ax.set_position([0, 0, 1, 1])
-ax.scatter(latent_codes_embedded[:, 0], latent_codes_embedded[:, 1], facecolors=colors, linewidths=0.5, edgecolors=(0.1, 0.1, 0.1, 1.0), s=sizes)
+ax.scatter(latent_codes_embedded[:, 0], latent_codes_embedded[:, 1], facecolors=dataset.get_colors(), linewidths=0.5, edgecolors=(0.1, 0.1, 0.1, 1.0), s=sizes)
 
 for i in range(len(dataset)):
     ax.text(latent_codes_embedded[i, 0], latent_codes_embedded[i, 1] -2.5, dataset.get_row(i)[2], size=4, horizontalalignment='center', verticalalignment='top')

@@ -117,6 +117,15 @@ class CSVVoxelDataset(VoxelDataset):
     def get_row(self, index):
         return self.rows[index]
 
+    def get_colors(self):
+        colors = np.zeros((len(self), 3))
+        for i in range(len(self)):
+            color = self.rows[i][1]
+            colors[i, 0] = int(color[3:5], 16) / 255
+            colors[i, 1] = int(color[5:7], 16) / 255
+            colors[i, 2] = int(color[7:], 16) / 255
+        return colors
+
 # This dataset is balanced so that samples from each category are used at the same frequency.
 # The .shuffle() method should be called after each epoch.
 class BalancedDataset(Dataset):

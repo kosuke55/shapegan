@@ -67,13 +67,6 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import math
 
-colors = np.zeros((len(dataset), 3))
-for i in range(len(dataset)):
-    color = dataset.get_row(i)[1]
-    colors[i, 0] = int(color[3:5], 16) / 255
-    colors[i, 1] = int(color[5:7], 16) / 255
-    colors[i, 2] = int(color[7:], 16) / 255
-
 names = [dataset.get_row(i)[2] for i in range(len(dataset))]
 
 def try_find_shortest_roundtrip(indices):
@@ -118,6 +111,8 @@ frame_latent_codes = spline(progress)
 embedded_spline = scipy.interpolate.CubicSpline(np.arange(SAMPLE_COUNT + 1), latent_codes_embedded[indices, :], axis=0, bc_type='periodic')
 frame_latent_codes_embedded = embedded_spline(progress)
 frame_latent_codes_embedded[0, :] = frame_latent_codes_embedded[-1, :]
+
+colors = dataset.get_colors()
 
 color_spline = scipy.interpolate.CubicSpline(np.arange(SAMPLE_COUNT + 1), colors[indices, :], axis=0, bc_type='periodic')
 frame_colors = color_spline(progress)
