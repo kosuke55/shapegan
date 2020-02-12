@@ -66,7 +66,7 @@ for i in range(len(dataset)):
     colors[i, 2] = int(color[7:], 16) / 255
 
 sizes = np.array([float(dataset.get_row(i)[4]) for i in range(len(dataset))])
-sizes = np.power(sizes, 2/3)
+sizes = np.power(sizes, 1/3)
 sizes = sizes / np.max(sizes) * 60
 
 size_inches = 6

@@ -1,5 +1,6 @@
 from util import device, ensure_directory
-from dataset import dataset
+from datasets import CSVVoxelDataset
+from torch.utils.data import DataLoader
 import scipy
 import numpy as np
 from rendering import MeshRenderer
@@ -12,7 +13,6 @@ from sklearn.manifold import TSNE
 from matplotlib.offsetbox import Bbox
 from sklearn.cluster import KMeans
 import os
-import csv
 from PIL import ImageFont
 
 
@@ -22,63 +22,32 @@ TRANSITION_FRAMES = 60
 FRAMES = SAMPLE_COUNT * TRANSITION_FRAMES
 progress = np.arange(FRAMES, dtype=float) / TRANSITION_FRAMES
 
-dataset.load_voxels(device)
+dataset = CSVVoxelDataset('data/color-name-volume-mapping-bc-primates.csv', 'data/sdf-volumes/**/*.npy')
 
-DIRECTORY_MODELS = 'data/meshes/'
-MODEL_EXTENSION = '.ply'
+USE_VOLUME_NEURON = False
 
-def get_model_files():
-    for directory, _, files in os.walk(DIRECTORY_MODELS):
-        for filename in files:
-            if filename.endswith(MODEL_EXTENSION):
-                yield os.path.join(directory, filename)
-filenames = sorted(list(get_model_files()))
-
-file = open('data/color-name-mapping.csv', 'r')
-reader = csv.reader(file)
-reader_iterator = iter(reader)
-column_names = next(reader_iterator)
-
-csv_file_names = []
-csv_colors = []
-csv_names = []
-
-for row in reader_iterator:
-    csv_file_names.append(row[0].strip())
-    csv_colors.append(row[1])
-    csv_names.append(row[2])
-
-csv_indices = []
-for file_name in filenames:
-    found_any = False
-    for j in range(len(csv_file_names)):
-        if csv_file_names[j] in file_name:
-            csv_indices.append(j)
-            found_any = True
-            break
-    if not found_any:
-        print('Filename not found: ' + file_name)
-        csv_indices.append(0)
-
-colors = [csv_colors[i].lstrip('#') for i in csv_indices]
-colors = [tuple(int(h[i:i+2], 16) / 255 for i in (0, 2, 4)) for h in colors]
-names = [csv_names[i] for i in csv_indices]
 font = ImageFont.truetype('cmunrm.ttf', 60)
 
 from model.autoencoder import Autoencoder, LATENT_CODE_SIZE
-vae = Autoencoder(is_variational=False)
-vae.load()
-vae.eval()
-print("Calculating latent codes...")
+autoencoder = Autoencoder(is_variational=False)
+autoencoder.load()
+autoencoder.eval()
 
-latent_codes = torch.zeros((dataset.size, LATENT_CODE_SIZE))
-batch_size = 1000
+latent_codes = np.zeros((len(dataset), LATENT_CODE_SIZE))
+data_loader = DataLoader(dataset, shuffle=False, batch_size=16, num_workers=8)
+
 with torch.no_grad():
-    for i in range(dataset.size):
-        latent_codes[i, :] = vae.encode(dataset.voxels[i, :, :, :]).detach().cpu()
-    del dataset.voxels
-    latent_codes = latent_codes.numpy()
+    p = 0
+    for batch in tqdm(data_loader, desc='Creating latent codes'):
+        voxels, meta = batch
 
+        if USE_VOLUME_NEURON:
+            volume_data = [float(v) for v in meta[4]]
+        
+        batch_latent_codes = autoencoder.encode(voxels.to(device), volume=volume_data if USE_VOLUME_NEURON else None).cpu().numpy()
+
+        latent_codes[p:p+batch_latent_codes.shape[0]] = batch_latent_codes
+        p += batch_latent_codes.shape[0]
 
 print("Calculating embedding...")
 tsne = TSNE(n_components=2)
@@ -98,7 +67,14 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import math
 
-colors = np.array(colors)
+colors = np.zeros((len(dataset), 3))
+for i in range(len(dataset)):
+    color = dataset.get_row(i)[1]
+    colors[i, 0] = int(color[3:5], 16) / 255
+    colors[i, 1] = int(color[5:7], 16) / 255
+    colors[i, 2] = int(color[7:], 16) / 255
+
+names = [dataset.get_row(i)[2] for i in range(len(dataset))]
 
 def try_find_shortest_roundtrip(indices):
     best_order = indices
@@ -191,7 +167,7 @@ viewer.rotation = (130+180, 20)
 def render_frame(frame_index):
     viewer.model_color = frame_colors[frame_index, :]
     with torch.no_grad():
-        viewer.set_voxels(vae.decode(frame_latent_codes[frame_index, :]))
+        viewer.set_voxels(autoencoder.decode(frame_latent_codes[frame_index, :]))
     image_mesh = viewer.get_image(flip_red_blue=True)
 
     progress, model_index = math.modf(frame_index / TRANSITION_FRAMES + 0.5)

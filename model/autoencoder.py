@@ -122,7 +122,6 @@ class Autoencoder(SavableModule):
     def forward(self, x, volume=None):
         if not self.is_variational:
             z = self.encode(x, volume=volume)
-            print(z[0, :])
             x = self.decode(z)
             return x
 
