@@ -26,7 +26,7 @@ dataset = CSVVoxelDataset('data/color-name-volume-mapping-bc-primates.csv', 'dat
 
 USE_VOLUME_NEURON = False
 
-font = ImageFont.truetype('cmunrm.ttf', 60)
+font = ImageFont.truetype('helvetica.ttf', 60)
 
 from model.autoencoder import Autoencoder, LATENT_CODE_SIZE
 autoencoder = Autoencoder(is_variational=False)
@@ -127,7 +127,7 @@ width, height = 40, 40
 PLOT_FILE_NAME = 'tsne.png'
 ensure_directory('images')
 
-margin = 2
+margin = 4
 range_x = (latent_codes_embedded[:, 0].min() - margin, latent_codes_embedded[:, 0].max() + margin)
 range_y = (latent_codes_embedded[:, 1].min() - margin, latent_codes_embedded[:, 1].max() + margin)
 
@@ -167,7 +167,6 @@ def render_frame(frame_index):
 
     progress, model_index = math.modf(frame_index / TRANSITION_FRAMES + 0.5)
     img = Image.fromarray(np.uint8(image_mesh))
-    font = ImageFont.truetype('cmunrm.ttf', 60)
     name = stop_names[int(model_index)]
     d = ImageDraw.Draw(img)
     width, _ = d.textsize(name, font=font)
