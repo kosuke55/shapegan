@@ -13,13 +13,13 @@ autoencoder = Autoencoder(is_variational=False)
 autoencoder.load()
 autoencoder.eval()
 
-dataset = CSVVoxelDataset('data/color-name-volume-mapping-bc-primates.csv', 'data/sdf-volumes/**/*.npy')
+dataset = CSVVoxelDataset('data/color-name-volume-binomial-mapping-bc-primates-and-humans.csv', 'data/sdf-volumes/**/*.npy')
 
 print("The dataset contains {:d} samples.".format(len(dataset)))
 
 data_loader = DataLoader(dataset, shuffle=False, batch_size=16, num_workers=8)
 
-USE_VOLUME_NEURON = False
+USE_VOLUME_NEURON = True
 
 LATENT_CODES_FILENAME = 'data/latent_codes.npy'
 LATENT_CODES_TSNE_FILENAME = 'data/latent_codes_tsne.npy'
