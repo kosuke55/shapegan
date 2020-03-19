@@ -27,3 +27,5 @@ data/
 generated_objects/
 
 tsne.png
+
+reconstructed/
