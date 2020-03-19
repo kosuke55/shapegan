@@ -22,11 +22,12 @@ TRANSITION_FRAMES = 60
 FRAMES = SAMPLE_COUNT * TRANSITION_FRAMES
 progress = np.arange(FRAMES, dtype=float) / TRANSITION_FRAMES
 
-dataset = CSVVoxelDataset('data/color-name-volume-mapping-bc-primates.csv', 'data/sdf-volumes/**/*.npy')
+dataset = CSVVoxelDataset('data/color-name-volume-binomial-mapping-bc-primates-and-humans.csv', 'data/sdf-volumes/**/*.npy')
 
-USE_VOLUME_NEURON = False
+USE_VOLUME_NEURON = True
 
 font = ImageFont.truetype('helvetica.ttf', 60)
+#font = ImageFont.truetype('DejaVu Sans.ttf', 60)
 
 from model.autoencoder import Autoencoder, LATENT_CODE_SIZE
 autoencoder = Autoencoder(is_variational=False)
