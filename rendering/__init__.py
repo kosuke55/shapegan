@@ -29,6 +29,8 @@ SHADOW_TEXTURE_SIZE = 1024
 
 DEFAULT_ROTATION = (147+180, 20)
 
+TAUBIN_SMOOTHING_STEPS = 20
+
 def create_shadow_texture():
     texture_id = glGenTextures(1)
     glBindTexture(GL_TEXTURE_2D, texture_id)
@@ -118,6 +120,14 @@ class MeshRenderer():
                 voxels = np.pad(voxels, 1, mode='constant', constant_values=1)
             try:
                 vertices, faces, normals, _ = skimage.measure.marching_cubes_lewiner(voxels, level=level, spacing=(2.0 / voxel_resolution, 2.0 / voxel_resolution, 2.0 / voxel_resolution))
+                
+                if TAUBIN_SMOOTHING_STEPS is not None:
+                    mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_normals=normals)
+                    trimesh.smoothing.filter_taubin(mesh, iterations=TAUBIN_SMOOTHING_STEPS)
+                    vertices = mesh.vertices
+                    faces = mesh.faces
+                    normals = mesh.vertex_normals
+
                 vertices = vertices[faces, :].astype(np.float32) - 1
                 self.ground_level = np.min(vertices[:, 1]).item()
 
@@ -143,6 +153,9 @@ class MeshRenderer():
     def set_mesh(self, mesh, smooth=False, center_and_scale=False):
         if mesh is None:
             return
+
+        if TAUBIN_SMOOTHING_STEPS is not None:
+            trimesh.smoothing.filter_taubin(mesh, iterations=TAUBIN_SMOOTHING_STEPS)
 
         vertices = np.array(mesh.triangles, dtype=np.float32).reshape(-1, 3)
         
