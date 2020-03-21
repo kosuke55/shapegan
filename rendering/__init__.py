@@ -29,7 +29,7 @@ SHADOW_TEXTURE_SIZE = 1024
 
 DEFAULT_ROTATION = (147+180, 20)
 
-TAUBIN_SMOOTHING_STEPS = 20
+TAUBIN_SMOOTHING_STEPS = None
 
 def create_shadow_texture():
     texture_id = glGenTextures(1)
