@@ -14,9 +14,9 @@ autoencoder.eval()
 
 viewer = MeshRenderer(size=1080, start_thread=False)
 viewer.rotation = (130+180, 20)
-viewer.model_color = (0.5, 0.5, 0.5)    
+viewer.model_color = (0.6, 0.6, 0.6)
 
-with open('data/primate_brain_latent_code_aces.csv', 'r') as csv_file:
+with open('data/primate_brain_latent_code_aces_w_human_20_03_2020.csv', 'r') as csv_file:
     csv_reader = csv.reader(csv_file)
     csv_iterator = iter(csv_reader)
     next(csv_iterator)
