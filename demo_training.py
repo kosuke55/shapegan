@@ -43,8 +43,12 @@ image_index = 0
 
 while True:
     try:
-        indices[:BATCH_SIZE//2] = torch.tensor(np.random.choice(positive_indices, BATCH_SIZE//2), device=device)
-        indices[BATCH_SIZE//2:] = torch.tensor(np.random.choice(negative_indices, BATCH_SIZE//2), device=device)
+        indices[:BATCH_SIZE //
+                2] = torch.tensor(np.random.choice(positive_indices, BATCH_SIZE //
+                                                   2), device=device)
+        indices[BATCH_SIZE //
+                2:] = torch.tensor(np.random.choice(negative_indices, BATCH_SIZE //
+                                                    2), device=device)
 
         sdf_net.zero_grad()
         predicted_sdf = sdf_net(points[indices, :], latent_code)
@@ -55,15 +59,18 @@ while True:
 
         if loss.item() < error_targets[image_index]:
             try:
-                viewer.set_mesh(sdf_net.get_mesh(latent_code[0, :], voxel_resolution=64, raise_on_empty=True))
+                viewer.set_mesh(sdf_net.get_mesh(
+                    latent_code[0, :], voxel_resolution=64, raise_on_empty=True))
                 if save_images:
                     image = viewer.get_image(flip_red_blue=True)
-                    cv2.imwrite("images/frame-{:05d}.png".format(image_index), image)
+                    cv2.imwrite(
+                        "images/frame-{:05d}.png".format(image_index), image)
                 image_index += 1
             except ValueError:
                 pass
         step += 1
-        print('Step {:04d}, Image {:04d}, loss: {:.6f}, target: {:.6f}'.format(step, image_index, loss.item(), error_targets[image_index]))
+        print('Step {:04d}, Image {:04d}, loss: {:.6f}, target: {:.6f}'.format(
+            step, image_index, loss.item(), error_targets[image_index]))
     except KeyboardInterrupt:
         viewer.stop()
         break

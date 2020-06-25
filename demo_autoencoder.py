@@ -31,6 +31,7 @@ WAIT_TIME = 1.2
 
 SAMPLE_FROM_LATENT_DISTRIBUTION = 'sample' in sys.argv
 
+
 def get_latent_distribution():
     print("Calculating latent distribution...")
     indices = random.sample(list(range(len(dataset))), min(1000, len(dataset)))
@@ -43,14 +44,16 @@ def get_latent_distribution():
     print('Latent distribution: µ = {:.3f}, σ = {:.3f}'.format(mean, variance))
     return torch.distributions.normal.Normal(mean, variance)
 
+
 if SAMPLE_FROM_LATENT_DISTRIBUTION:
     latent_distribution = get_latent_distribution()
+
 
 def get_random():
     if SAMPLE_FROM_LATENT_DISTRIBUTION:
         return latent_distribution.sample(sample_shape=SHAPE).to(device)
     else:
-        index = random.randint(0, len(dataset) -1)
+        index = random.randint(0, len(dataset) - 1)
         return autoencoder.encode(dataset[index].to(device))
 
 
@@ -65,13 +68,14 @@ for epoch in count():
         start = time.perf_counter()
         end = start + TRANSITION_TIME
         while time.perf_counter() < end:
-            progress = min((time.perf_counter() - start) / TRANSITION_TIME, 1.0)
+            progress = min(
+                (time.perf_counter() - start) / TRANSITION_TIME, 1.0)
             model = previous_model * (1 - progress) + next_model * progress
             voxels = autoencoder.decode(model).detach().cpu()
             viewer.set_voxels(voxels)
 
         time.sleep(WAIT_TIME)
-        
+
     except KeyboardInterrupt:
         viewer.stop()
         break

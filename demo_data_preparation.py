@@ -11,6 +11,7 @@ from util import show_sdf_point_cloud
 
 MODEL_PATH = 'examples/chair.obj'
 
+
 def show_image(image, grayscale=False):
     from matplotlib import pyplot as plt
     plt.axis('off')
@@ -19,6 +20,7 @@ def show_image(image, grayscale=False):
     plt.tight_layout()
     plt.imshow(image, interpolation='nearest')
     plt.show()
+
 
 mesh = trimesh.load(MODEL_PATH)
 mesh = scale_to_unit_sphere(mesh)
@@ -29,8 +31,19 @@ print("Now showing the input model as a triangle mesh.\nClose the window to cont
 pyrender.Viewer(scene, use_raymond_lighting=True)
 
 camera_transform = get_camera_transform(math.radians(-140), math.radians(-20))
-camera = pyrender.PerspectiveCamera(yfov=2 * math.asin(1.0 / 2) * 0.97, aspectRatio=1.0, znear = 2 - 1.0, zfar = 2 + 1.0)
-normal_buffer, depth_buffer = render_normal_and_depth_buffers(mesh, camera, camera_transform, 1080)
+camera = pyrender.PerspectiveCamera(
+    yfov=2 *
+    math.asin(
+        1.0 /
+        2) *
+    0.97,
+    aspectRatio=1.0,
+    znear=2 -
+    1.0,
+    zfar=2 +
+    1.0)
+normal_buffer, depth_buffer = render_normal_and_depth_buffers(
+    mesh, camera, camera_transform, 1080)
 print("Now showing the normal map of a render of the mesh.\nClose the window to continue.")
 show_image(normal_buffer)
 
@@ -52,24 +65,27 @@ points = np.meshgrid(
 )
 
 points = np.stack(points).reshape(3, -1).transpose()
-sdf = surface_point_cloud.get_sdf_in_batches(points).reshape(1, resolution, resolution)[0, :, :]
+sdf = surface_point_cloud.get_sdf_in_batches(
+    points).reshape(1, resolution, resolution)[0, :, :]
 clip = 0.2
 sdf = np.clip(sdf, -clip, clip) / clip
 
 image = np.ones((resolution, resolution, 3))
-image[:,:,:2][sdf > 0] = (1.0 - sdf[sdf > 0])[:, np.newaxis]
-image[:,:,1:][sdf < 0] = (1.0 + sdf[sdf < 0])[:, np.newaxis]
+image[:, :, :2][sdf > 0] = (1.0 - sdf[sdf > 0])[:, np.newaxis]
+image[:, :, 1:][sdf < 0] = (1.0 + sdf[sdf < 0])[:, np.newaxis]
 image[np.abs(sdf) < 0.02, :] = 0
 print("Now showing a slice through the SDF of the model.\nClose the window to continue.")
 show_image(image)
 
 voxels = surface_point_cloud.get_voxels(voxel_resolution=64)
-vertices, faces, normals, _ = skimage.measure.marching_cubes_lewiner(voxels, level=0)
+vertices, faces, normals, _ = skimage.measure.marching_cubes_lewiner(
+    voxels, level=0)
 mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_normals=normals)
 print("Now showing a voxel volume reconstructed with Marching Cubes.\nClose the window to continue.")
 mesh.show()
 
-points, sdf = surface_point_cloud.sample_sdf_near_surface(number_of_points=150000)
+points, sdf = surface_point_cloud.sample_sdf_near_surface(
+    number_of_points=150000)
 
 print("Now showing a point cloud of non-uniformly sampled SDF data. Negative distances are red, positive distances are blue.")
 show_sdf_point_cloud(points, sdf)

@@ -1,33 +1,40 @@
-import os
-os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
-import pygame
-from pygame.locals import *
-from OpenGL.arrays import vbo
-import pygame.image
-
-from OpenGL.GL import *
-from OpenGL.GLU import *
-
-import numpy as np
-
-from rendering.binary_voxels_to_mesh import create_binary_voxel_mesh
-from rendering.shader import Shader
-
-import cv2
-import skimage.measure
-
-from threading import Thread, Lock
-import torch
-import trimesh
-import cv2
-
-from util import crop_image, ensure_directory
 from rendering.math import get_camera_transform
+from util import crop_image, ensure_directory
+import trimesh
+import torch
+from threading import Thread, Lock
+import skimage.measure
+from rendering.shader import Shader
+from rendering.binary_voxels_to_mesh import create_binary_voxel_mesh
+import numpy as np
+from OpenGL.GLU import *
+from OpenGL.GL import *
+import pygame.image
+from OpenGL.arrays import vbo
+from pygame.locals import *
+import pygame
+import os
+import sys
+
+try:
+    import cv2
+except ImportError:
+    for path in sys.path:
+        if '/opt/ros/' in path:
+            print('sys.path.remove({})'.format(path))
+            sys.path.remove(path)
+            import cv2
+            sys.path.append(path)
+            break
+
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
+
 
 CLAMP_TO_EDGE = 33071
 SHADOW_TEXTURE_SIZE = 1024
 
 DEFAULT_ROTATION = (147, 20)
+
 
 def create_shadow_texture():
     texture_id = glGenTextures(1)
@@ -37,7 +44,7 @@ def create_shadow_texture():
         GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_TEXTURE_SIZE, SHADOW_TEXTURE_SIZE, 0, GL_DEPTH_COMPONENT,
         GL_FLOAT, None
     )
-    
+
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
 
@@ -51,10 +58,11 @@ def create_shadow_texture():
     glBindTexture(GL_TEXTURE_2D, 0)
     return texture_id
 
+
 class MeshRenderer():
-    def __init__(self, size = 800, start_thread = True, background_color = (1, 1, 1, 1)):
+    def __init__(self, size=800, start_thread=True, background_color=(1, 1, 1, 1)):
         self.size = size
-        
+
         self.mouse = None
         self.rotation = list(DEFAULT_ROTATION)
 
@@ -85,7 +93,7 @@ class MeshRenderer():
         self.dataset_directories = None
 
         if start_thread:
-            thread = Thread(target = self._run)
+            thread = Thread(target=self._run)
             thread.start()
         else:
             self._initialize_opengl()
@@ -101,11 +109,10 @@ class MeshRenderer():
             self.normal_buffer = vbo.VBO(normals)
         else:
             self.normal_buffer.set_array(normals)
-        
+
         self.vertex_buffer_size = vertices.shape[0]
         self.request_render = True
         self.render_lock.release()
-
 
     def set_voxels(self, voxels, use_marching_cubes=True, shade_smooth=False, pad=True, level=0):
         if use_marching_cubes:
@@ -117,26 +124,30 @@ class MeshRenderer():
             if pad:
                 voxels = np.pad(voxels, 1, mode='constant', constant_values=1)
             try:
-                vertices, faces, normals, _ = skimage.measure.marching_cubes_lewiner(voxels, level=level, spacing=(2.0 / voxel_resolution, 2.0 / voxel_resolution, 2.0 / voxel_resolution))
+                vertices, faces, normals, _ = skimage.measure.marching_cubes_lewiner(voxels, level=level, spacing=(
+                    2.0 / voxel_resolution, 2.0 / voxel_resolution, 2.0 / voxel_resolution))
                 vertices = vertices[faces, :].astype(np.float32) - 1
                 self.ground_level = np.min(vertices[:, 1]).item()
 
                 if shade_smooth:
                     normals = normals[faces, :].astype(np.float32)
                 else:
-                    normals = np.cross(vertices[:, 1, :] - vertices[:, 0, :], vertices[:, 2, :] - vertices[:, 0, :])
+                    normals = np.cross(
+                        vertices[:, 1, :] - vertices[:, 0, :], vertices[:, 2, :] - vertices[:, 0, :])
                     normals = np.repeat(normals, 3, axis=0)
 
-                self._update_buffers(vertices.reshape((-1)), normals.reshape((-1)))
+                self._update_buffers(vertices.reshape(
+                    (-1)), normals.reshape((-1)))
                 self.model_size = 1.4
             except ValueError:
-                pass # Voxel array contains no sign change
+                pass  # Voxel array contains no sign change
         else:
             vertices, normals = create_binary_voxel_mesh(voxels)
             vertices -= (voxels.shape[0] + 1) / 2
             vertices /= voxels.shape[0] + 1
-            self._update_buffers(vertices, normals)         
-            self.model_size = max([voxels.shape[0] + 1, voxels.shape[1] + 1, voxels.shape[2] + 1])
+            self._update_buffers(vertices, normals)
+            self.model_size = max(
+                [voxels.shape[0] + 1, voxels.shape[1] + 1, voxels.shape[2] + 1])
             self.model_size = 0.75
             self.ground_level = np.min(vertices[1::3]).item()
 
@@ -145,36 +156,41 @@ class MeshRenderer():
             return
 
         vertices = np.array(mesh.triangles, dtype=np.float32).reshape(-1, 3)
-        
+
         if center_and_scale:
             vertices -= mesh.bounding_box.centroid[np.newaxis, :]
             vertices /= np.max(np.linalg.norm(vertices, axis=1))
-        
+
         self.ground_level = np.min(vertices[:, 1]).item()
         vertices = vertices.reshape((-1))
 
         if smooth:
-            normals = mesh.vertex_normals[mesh.faces.reshape(-1)].astype(np.float32) * -1
+            normals = mesh.vertex_normals[mesh.faces.reshape(
+                -1)].astype(np.float32) * -1
         else:
-            normals = np.repeat(mesh.face_normals, 3, axis=0).astype(np.float32)
-        
+            normals = np.repeat(mesh.face_normals, 3,
+                                axis=0).astype(np.float32)
+
         self._update_buffers(vertices, normals)
-        self.model_size = 1.08        
+        self.model_size = 1.08
 
     def _poll_mouse(self):
         left_mouse, _, right_mouse = pygame.mouse.get_pressed()
         pressed = left_mouse == 1 or right_mouse == 1
         current_mouse = pygame.mouse.get_pos()
         if self.mouse is not None and pressed:
-            movement = (current_mouse[0] - self.mouse[0], current_mouse[1] - self.mouse[1])
-            self.rotation = [self.rotation[0] + movement[0], max(-90, min(90, self.rotation[1] + movement[1]))]
+            movement = (current_mouse[0] - self.mouse[0],
+                        current_mouse[1] - self.mouse[1])
+            self.rotation = [self.rotation[0] + movement[0],
+                             max(-90, min(90, self.rotation[1] + movement[1]))]
         self.mouse = current_mouse
         return pressed
 
     def _render_shadow_texture(self, light_vp_matrix):
         glBindFramebuffer(GL_FRAMEBUFFER, self.shadow_framebuffer)
         glBindTexture(GL_TEXTURE_2D, self.shadow_texture)
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, self.shadow_texture, 0)
+        glFramebufferTexture2D(
+            GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, self.shadow_texture, 0)
         glActiveTexture(GL_TEXTURE0)
         glBindTexture(GL_TEXTURE_2D, self.shadow_texture)
         glDrawBuffer(GL_NONE)
@@ -198,7 +214,7 @@ class MeshRenderer():
     def _draw_mesh(self, use_normals=True):
         if self.vertex_buffer is None or self.normal_buffer is None:
             return
-        
+
         glEnableClientState(GL_VERTEX_ARRAY)
         self.vertex_buffer.bind()
         glVertexPointer(3, GL_FLOAT, 0, self.vertex_buffer)
@@ -222,25 +238,27 @@ class MeshRenderer():
         glNormalPointer(GL_FLOAT, 0, self.floor_normals)
 
         glDrawArrays(GL_TRIANGLES, 0, 6)
-    
+
     def _render(self):
         self.request_render = False
-        self.render_lock.acquire()        
+        self.render_lock.acquire()
 
-        light_vp_matrix = get_camera_transform(6, self.rotation[0], 50, project=True)
+        light_vp_matrix = get_camera_transform(
+            6, self.rotation[0], 50, project=True)
         self._render_shadow_texture(light_vp_matrix)
-        
+
         self.shader.use()
         self.shader.set_floor(False)
         self.shader.set_color(self.model_color)
         self.shader.set_y_offset(0)
-        camera_vp_matrix = get_camera_transform(self.model_size * 2, self.rotation[0], self.rotation[1], project=True)
+        camera_vp_matrix = get_camera_transform(
+            self.model_size * 2, self.rotation[0], self.rotation[1], project=True)
         self.shader.set_vp_matrix(camera_vp_matrix)
         self.shader.set_light_vp_matrix(light_vp_matrix)
-        
+
         glClearColor(*self.background_color)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-        
+
         glClearDepth(1.0)
         glDepthMask(GL_TRUE)
         glDepthFunc(GL_LESS)
@@ -252,7 +270,7 @@ class MeshRenderer():
         glActiveTexture(GL_TEXTURE1)
         glBindTexture(GL_TEXTURE_2D, self.shadow_texture)
         self.shader.set_shadow_texture(1)
-        
+
         self._draw_mesh()
         self.shader.set_floor(True)
         self._draw_floor()
@@ -263,16 +281,19 @@ class MeshRenderer():
         pygame.display.set_caption('Model Viewer')
         pygame.display.gl_set_attribute(pygame.GL_MULTISAMPLEBUFFERS, 1)
         pygame.display.gl_set_attribute(pygame.GL_MULTISAMPLESAMPLES, 4)
-        self.window = pygame.display.set_mode((self.size, self.size), pygame.OPENGLBLIT)
+        self.window = pygame.display.set_mode(
+            (self.size, self.size), pygame.OPENGLBLIT)
 
         self.shader = Shader()
-        self.shader.initShader(open('rendering/vertex.glsl').read(), open('rendering/fragment.glsl').read())
+        self.shader.initShader(
+            open('rendering/vertex.glsl').read(), open('rendering/fragment.glsl').read())
 
         self.shadow_framebuffer = glGenFramebuffers(1)
         self.shadow_texture = create_shadow_texture()
 
         self.depth_shader = Shader()
-        self.depth_shader.initShader(open('rendering/depth_vertex.glsl').read(), open('rendering/depth_fragment.glsl').read())
+        self.depth_shader.initShader(open(
+            'rendering/depth_vertex.glsl').read(), open('rendering/depth_fragment.glsl').read())
 
         self.prepare_floor()
 
@@ -290,7 +311,7 @@ class MeshRenderer():
         vertices = np.array(mesh.triangles, dtype=np.float32).reshape(-1, 3)
         vertices = vertices.reshape((-1))
         normals = np.repeat(mesh.face_normals, 3, axis=0).astype(np.float32)
-        
+
         self.floor_vertices = vbo.VBO(vertices)
         self.floor_normals = vbo.VBO(normals)
 
@@ -303,7 +324,7 @@ class MeshRenderer():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     return
-                
+
                 if event.type == pygame.KEYDOWN:
                     if pygame.key.get_pressed()[pygame.K_F12]:
                         self.save_screenshot()
@@ -314,9 +335,9 @@ class MeshRenderer():
             if self._poll_mouse() or self.request_render:
                 self._render()
                 pygame.display.flip()
-            
+
             pygame.time.wait(10)
-        
+
         self.delete_buffers()
 
     def delete_buffers(self):
@@ -334,17 +355,20 @@ class MeshRenderer():
             output_size = self.size
 
         string_image = pygame.image.tostring(self.window, 'RGB')
-        image = pygame.image.fromstring(string_image, (self.size, self.size), 'RGB')
+        image = pygame.image.fromstring(
+            string_image, (self.size, self.size), 'RGB')
         if greyscale:
             array = np.transpose(pygame.surfarray.array3d(image)[:, :, 0])
         else:
-            array = np.transpose(pygame.surfarray.array3d(image)[:, :, (2, 1, 0) if flip_red_blue else slice(None)], (1, 0, 2))
+            array = np.transpose(pygame.surfarray.array3d(
+                image)[:, :, (2, 1, 0) if flip_red_blue else slice(None)], (1, 0, 2))
 
         if crop:
             array = crop_image(array)
 
         if output_size != self.size:
-            array = cv2.resize(array, dsize=(output_size, output_size), interpolation=cv2.INTER_CUBIC)
+            array = cv2.resize(array, dsize=(
+                output_size, output_size), interpolation=cv2.INTER_CUBIC)
 
         return array
 

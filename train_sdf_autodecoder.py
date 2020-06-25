@@ -36,9 +36,10 @@ sdf_net = SDFNet()
 if "continue" in sys.argv:
     sdf_net.load()
     latent_codes = torch.load(LATENT_CODES_FILENAME).to(device)
-else:    
+else:
     normal_distribution = torch.distributions.normal.Normal(0, 0.0001)
-    latent_codes = normal_distribution.sample((MODEL_COUNT, LATENT_CODE_SIZE)).to(device)
+    latent_codes = normal_distribution.sample(
+        (MODEL_COUNT, LATENT_CODE_SIZE)).to(device)
 latent_codes.requires_grad = True
 
 network_optimizer = optim.Adam(sdf_net.parameters(), lr=1e-5)
@@ -51,6 +52,7 @@ if 'continue' in sys.argv:
     first_epoch = len(log_file_contents)
 
 log_file = open(LOG_FILE_NAME, "a" if "continue" in sys.argv else "w")
+
 
 def create_batches():
     indices_positive = np.nonzero(signs)[0]
@@ -65,8 +67,9 @@ def create_batches():
     np.random.shuffle(indices)
     batch_count = int(indices.shape[0] / BATCH_SIZE)
     for i in range(batch_count - 1):
-        yield indices[i * BATCH_SIZE:(i+1)*BATCH_SIZE]
+        yield indices[i * BATCH_SIZE:(i + 1) * BATCH_SIZE]
     yield indices[(batch_count - 1) * BATCH_SIZE:]
+
 
 def train():
     for epoch in count(start=first_epoch):
@@ -74,7 +77,7 @@ def train():
         loss_values = []
         batch_index = 0
         for batch in tqdm(list(create_batches())):
-            indices = torch.tensor(batch, device = device)
+            indices = torch.tensor(batch, device=device)
             model_indices = indices / POINTCLOUD_SIZE
 
             batch_latent_codes = latent_codes[model_indices, :]
@@ -85,7 +88,8 @@ def train():
             if latent_codes.grad is not None:
                 latent_codes.grad.data.zero_()
             output = sdf_net.forward(batch_points, batch_latent_codes)
-            loss = torch.mean(torch.abs(output - batch_sdf)) + SIGMA * torch.mean(torch.pow(batch_latent_codes, 2))
+            loss = torch.mean(torch.abs(output - batch_sdf)) + \
+                SIGMA * torch.mean(torch.pow(batch_latent_codes, 2))
             loss.backward()
             network_optimizer.step()
             latent_code_optimizer.step()
@@ -93,24 +97,37 @@ def train():
 
             if batch_index % 400 == 0 and "nogui" not in sys.argv:
                 try:
-                    viewer.set_mesh(sdf_net.get_mesh(latent_codes[random.randrange(MODEL_COUNT), :]))
+                    viewer.set_mesh(sdf_net.get_mesh(
+                        latent_codes[random.randrange(MODEL_COUNT), :]))
                 except ValueError:
                     pass
 
             batch_index += 1
 
-        variance = np.var(latent_codes.detach().reshape(-1).cpu().numpy()) ** 0.5
+        variance = np.var(
+            latent_codes.detach().reshape(-1).cpu().numpy()) ** 0.5
         epoch_duration = time.time() - epoch_start_time
-        
-        print("Epoch {:d}, {:.1f}s. Loss: {:.8f}".format(epoch, epoch_duration, np.mean(loss_values)))
+
+        print("Epoch {:d}, {:.1f}s. Loss: {:.8f}".format(
+            epoch, epoch_duration, np.mean(loss_values)))
 
         sdf_net.save()
         torch.save(latent_codes, LATENT_CODES_FILENAME)
-        
-        sdf_net.save(epoch=epoch)
-        torch.save(latent_codes, sdf_net.get_filename(epoch=epoch, filename='sdf_net_latent_codes.to'))
 
-        log_file.write('{:d} {:.1f} {:.6f} {:.6f}\n'.format(epoch, epoch_duration, np.mean(loss_values), variance))
+        sdf_net.save(epoch=epoch)
+        torch.save(
+            latent_codes,
+            sdf_net.get_filename(
+                epoch=epoch,
+                filename='sdf_net_latent_codes.to'))
+
+        log_file.write(
+            '{:d} {:.1f} {:.6f} {:.6f}\n'.format(
+                epoch,
+                epoch_duration,
+                np.mean(loss_values),
+                variance))
         log_file.flush()
+
 
 train()
