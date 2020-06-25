@@ -6,20 +6,25 @@ FEATURE_COUNTS = [128, 64, 32, 1]
 FINAL_LAYER_FEATURES = 256
 
 # works like fromRGB in the Progressive GAN paper
+
+
 def from_SDF(x, iteration):
     resolution = RESOLUTIONS[iteration]
     target_feature_count = FEATURE_COUNTS[iteration]
-    
+
     x = x.reshape((-1, 1, resolution, resolution, resolution))
     batch_size = x.shape[0]
-    x = torch.cat((x, torch.zeros((batch_size, target_feature_count - 1, resolution, resolution, resolution), device=x.device)), dim=1)
+    x = torch.cat((x, torch.zeros((batch_size, target_feature_count - 1,
+                                   resolution, resolution, resolution), device=x.device)), dim=1)
     return x
+
 
 class Discriminator(SavableModule):
     def __init__(self):
         self.iteration = 0
-        self.filename_base="hybrid_progressive_gan_discriminator_{:d}.to"
-        super(Discriminator, self).__init__(filename=self.filename_base.format(self.iteration))
+        self.filename_base = "hybrid_progressive_gan_discriminator_{:d}.to"
+        super(Discriminator, self).__init__(
+            filename=self.filename_base.format(self.iteration))
 
         self.fade_in_progress = 1
 
@@ -33,9 +38,11 @@ class Discriminator(SavableModule):
         self.optional_layers = nn.ModuleList()
         for i in range(len(FEATURE_COUNTS)):
             in_channels = FEATURE_COUNTS[i]
-            out_channels = FEATURE_COUNTS[i-1] if i > 0 else FINAL_LAYER_FEATURES
+            out_channels = FEATURE_COUNTS[i -
+                                          1] if i > 0 else FINAL_LAYER_FEATURES
             submodule = nn.Sequential(
-                nn.Conv3d(in_channels = in_channels, out_channels = out_channels, kernel_size = 4, stride = 2, padding = 1),
+                nn.Conv3d(in_channels=in_channels, out_channels=out_channels,
+                          kernel_size=4, stride=2, padding=1),
                 nn.LeakyReLU(negative_slope=0.2)
             )
             self.optional_layers.append(submodule)
@@ -45,7 +52,7 @@ class Discriminator(SavableModule):
         x_in = x
         x = from_SDF(x, self.iteration)
         x = self.optional_layers[self.iteration](x)
-        if (self.fade_in_progress < 1.0) and self.iteration > 0:
+        if (self.fade_in_progress < 1.0) and self.xoteration > 0:
             x2 = from_SDF(x_in[:, ::2, ::2, ::2], self.iteration - 1)
             x = self.fade_in_progress * x + (1.0 - self.fade_in_progress) * x2
 

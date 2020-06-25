@@ -1,26 +1,29 @@
-from util import create_text_slice, device
-from collections import deque
-from model.autoencoder import Autoencoder
-from tqdm import tqdm
-import time
+import random
 import sys
-import numpy as np
-from itertools import count
+import time
+from collections import deque
 
+import numpy as np
 import torch
+
 import torch.nn as nn
 import torch.optim as optim
-from datasets import VoxelDataset
-from torch.utils.data import DataLoader
 
-import random
+from itertools import count
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+
+from datasets import VoxelDataset
+from model.autoencoder import Autoencoder
+from util import create_text_slice, device
+
 random.seed(0)
 torch.manual_seed(0)
 
-
 BATCH_SIZE = 32
 
-dataset = VoxelDataset.glob('data/chairs/voxels_32/**.npy')
+dataset = VoxelDataset.glob(
+    '/media/kosuke/SANDISK/ShapeNetCore.v2/gan/data/mugs/voxels_32/**.npy')
 data_loader = DataLoader(
     dataset,
     shuffle=True,

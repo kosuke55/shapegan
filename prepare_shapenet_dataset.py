@@ -11,9 +11,11 @@ from tqdm import tqdm
 from util import ensure_directory
 
 # DATASET_NAME = 'chairs'
-DATASET_NAME = 'sofas'
+# DATASET_NAME = 'sofas'
+DATASET_NAME = 'mugs'
 # DIRECTORY_MODELS = 'data/shapenet/03001627'
-DIRECTORY_MODELS = '/media/kosuke/SANDISK/ShapeNetCore.v2/04256520'
+# DIRECTORY_MODELS = '/media/kosuke/SANDISK/ShapeNetCore.v2/04256520'
+DIRECTORY_MODELS = '/media/kosuke/SANDISK/ShapeNetCore.v2/03797390'
 MODEL_EXTENSION = '.obj'
 DIRECTORY_VOXELS \
     = '/media/kosuke/SANDISK/ShapeNetCore.v2/gan/data/{:s}/voxels_{{:d}}/'.format(DATASET_NAME)
@@ -51,13 +53,15 @@ SCAN_RESOLUTION = 1024
 
 def get_model_files():
     for directory, _, files in os.walk(DIRECTORY_MODELS):
+        # print(files)
         for filename in files:
             if filename.endswith(MODEL_EXTENSION):
+                # print(filename)
                 yield os.path.join(directory, filename)
 
 
 def get_hash(filename):
-    return filename.split('/')[-3]
+    return filename.split('/')[-2]
 
 
 def get_voxel_filename(model_filename, resolution):
@@ -206,6 +210,7 @@ def process_model_files():
     ensure_directory(DIRECTORY_BAD_MESHES)
 
     files = list(get_model_files())
+    # print(files)
 
     worker_count = os.cpu_count() // 2
     print("Using {:d} processes.".format(worker_count))
@@ -217,6 +222,7 @@ def process_model_files():
         progress.update()
 
     for filename in files:
+        print(filename)
         pool.apply_async(process_model_file, args=(
             filename,), callback=on_complete)
     pool.close()

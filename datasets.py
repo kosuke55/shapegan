@@ -1,7 +1,8 @@
+import os
+
+import numpy as np
 import torch
 from torch.utils.data import Dataset
-import os
-import numpy as np
 
 
 class VoxelDataset(Dataset):
@@ -34,9 +35,13 @@ class VoxelDataset(Dataset):
     @staticmethod
     def from_split(pattern, split_file_name):
         split_file = open(split_file_name, 'r')
+        print(split_file)
         ids = split_file.readlines()
+        print(ids)
         files = [pattern.format(id.strip()) for id in ids]
+        print(files)
         files = [file for file in files if os.path.exists(file)]
+        print(files)
         return VoxelDataset(files)
 
     def show(self):

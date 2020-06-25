@@ -1,20 +1,18 @@
-from torch.utils.data import DataLoader
-from datasets import VoxelDataset
-from util import create_text_slice
-from itertools import count
-
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import numpy as np
-import torch.autograd as autograd
-
 import random
 import time
 import sys
 from collections import deque
+from itertools import count
+
+import numpy as np
+import torch
+import torch.autograd as autograd
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+from datasets import VoxelDataset
 from model.sdf_net import SDFNet
 from model.progressive_gan import Discriminator, LATENT_CODE_SIZE, RESOLUTIONS
 from util import create_text_slice, device, standard_normal_distribution, get_voxel_coordinates
@@ -43,8 +41,14 @@ NUMBER_OF_EPOCHS = int(get_parameter('epochs', 250))
 VOXEL_RESOLUTION = RESOLUTIONS[ITERATION]
 
 dataset = VoxelDataset.from_split(
-    'data/chairs/voxels_{:d}/{{:s}}.npy'.format(VOXEL_RESOLUTION),
-    'data/chairs/train.txt')
+    # '/media/kosuke/SANDISK/ShapeNetCore.v2/gan/data/mugs/voxels_{:d}/03797390.npy'.format(
+    '/media/kosuke/SANDISK/ShapeNetCore.v2/gan/data/mugs/voxels_{:d}/{{:s}}.npy'.format(
+        VOXEL_RESOLUTION),
+    '/media/kosuke/SANDISK/ShapeNetCore.v2/gan/data/mugs/train.txt')
+# 'data/chairs/voxels_{:d}/{{:s}}.npy'.format(VOXEL_RESOLUTION),
+# 'data/chairs/train.txt')
+print('---------------')
+print(dataset)
 data_loader = DataLoader(
     dataset,
     batch_size=BATCH_SIZE,
@@ -151,6 +155,7 @@ def train():
             try:
                 # Skip final batch if it contains only one object
                 if valid_sample.shape[0] == 1:
+                    print('contimue')
                     continue
                 valid_sample = valid_sample.to(device)
                 current_batch_size = valid_sample.shape[0]
