@@ -1,22 +1,27 @@
 import os
 # Enable this when running on a computer without a screen:
 # os.environ['PYOPENGL_PLATFORM'] = 'egl'
-import numpy as np
 import traceback
-import trimesh
-
-from mesh_to_sdf import get_surface_point_cloud, scale_to_unit_cube, scale_to_unit_sphere, BadMeshException
 from multiprocessing import Pool
+
+import numpy as np
+import trimesh
+from mesh_to_sdf import get_surface_point_cloud, \
+    scale_to_unit_cube, scale_to_unit_sphere, BadMeshException
 from tqdm import tqdm
+
 from util import ensure_directory
 
 # DATASET_NAME = 'chairs'
 # DATASET_NAME = 'sofas'
-DATASET_NAME = 'mugs'
+DATASET_NAME = 'ycb'
+
 # DIRECTORY_MODELS = 'data/shapenet/03001627'
 # DIRECTORY_MODELS = '/media/kosuke/SANDISK/ShapeNetCore.v2/04256520'
-DIRECTORY_MODELS = '/media/kosuke/SANDISK/ShapeNetCore.v2/03797390'
-MODEL_EXTENSION = '.obj'
+# DIRECTORY_MODELS = '/media/kosuke/SANDISK/ShapeNetCore.v2/03797390'
+DIRECTORY_MODELS = '/media/kosuke/SANDISK/ShapeNetCore.v2/ycb'
+# MODEL_EXTENSION = '.obj'
+MODEL_EXTENSION = '.stl'
 DIRECTORY_VOXELS \
     = '/media/kosuke/SANDISK/ShapeNetCore.v2/gan/data/{:s}/voxels_{{:d}}/'.format(DATASET_NAME)
 DIRECTORY_UNIFORM \
@@ -37,6 +42,7 @@ VOXEL_RESOLUTIONS = [8, 16, 32, 64]
 # For DeepSDF autodecoder, contains uniformly and non-uniformly sampled
 # points as proposed in the DeepSDF paper
 CREATE_SDF_CLOUDS = False
+
 # Uniformly sampled points for the Pointnet-based GAN and surface point
 # clouds for the pointnet-based GAN with refinement
 CREATE_UNIFORM_AND_SURFACE = True
@@ -56,6 +62,9 @@ def get_model_files():
         # print(files)
         for filename in files:
             if filename.endswith(MODEL_EXTENSION):
+                if DATASET_NAME == 'ycb':
+                    if filename != 'base.stl':
+                        continue
                 # print(filename)
                 yield os.path.join(directory, filename)
 

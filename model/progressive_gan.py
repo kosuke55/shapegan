@@ -38,8 +38,8 @@ class Discriminator(SavableModule):
         self.optional_layers = nn.ModuleList()
         for i in range(len(FEATURE_COUNTS)):
             in_channels = FEATURE_COUNTS[i]
-            out_channels = FEATURE_COUNTS[i -
-                                          1] if i > 0 else FINAL_LAYER_FEATURES
+            out_channels \
+                = FEATURE_COUNTS[i - 1] if i > 0 else FINAL_LAYER_FEATURES
             submodule = nn.Sequential(
                 nn.Conv3d(in_channels=in_channels, out_channels=out_channels,
                           kernel_size=4, stride=2, padding=1),
@@ -52,7 +52,7 @@ class Discriminator(SavableModule):
         x_in = x
         x = from_SDF(x, self.iteration)
         x = self.optional_layers[self.iteration](x)
-        if (self.fade_in_progress < 1.0) and self.xoteration > 0:
+        if (self.fade_in_progress < 1.0) and self.iteration > 0:
             x2 = from_SDF(x_in[:, ::2, ::2, ::2], self.iteration - 1)
             x = self.fade_in_progress * x + (1.0 - self.fade_in_progress) * x2
 
@@ -60,7 +60,7 @@ class Discriminator(SavableModule):
         while i >= 0:
             x = self.optional_layers[i](x)
             i -= 1
-            
+
         return self.head(x).squeeze()
 
     def set_iteration(self, value):

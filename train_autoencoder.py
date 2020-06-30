@@ -5,10 +5,8 @@ from collections import deque
 
 import numpy as np
 import torch
-
 import torch.nn as nn
 import torch.optim as optim
-
 from itertools import count
 from torch.utils.data import DataLoader
 from tqdm import tqdm

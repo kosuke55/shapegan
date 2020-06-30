@@ -36,15 +36,15 @@ CONTINUE = "continue" in sys.argv
 FADE_IN_EPOCHS = 10
 BATCH_SIZE = 16
 GRADIENT_PENALTY_WEIGHT = 10
-NUMBER_OF_EPOCHS = int(get_parameter('epochs', 250))
+NUMBER_OF_EPOCHS = int(get_parameter('epochs', 10000))
 
 VOXEL_RESOLUTION = RESOLUTIONS[ITERATION]
 
 dataset = VoxelDataset.from_split(
     # '/media/kosuke/SANDISK/ShapeNetCore.v2/gan/data/mugs/voxels_{:d}/03797390.npy'.format(
-    '/media/kosuke/SANDISK/ShapeNetCore.v2/gan/data/mugs/voxels_{:d}/{{:s}}.npy'.format(
+    '/media/kosuke/SANDISK/ShapeNetCore.v2/gan/data/ycb/voxels_{:d}/{{:s}}.npy'.format(
         VOXEL_RESOLUTION),
-    '/media/kosuke/SANDISK/ShapeNetCore.v2/gan/data/mugs/train.txt')
+    '/media/kosuke/SANDISK/ShapeNetCore.v2/gan/data/ycb/train.txt')
 # 'data/chairs/voxels_{:d}/{{:s}}.npy'.format(VOXEL_RESOLUTION),
 # 'data/chairs/train.txt')
 print('---------------')

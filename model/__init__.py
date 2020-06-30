@@ -9,6 +9,7 @@ CHECKPOINT_PATH = os.path.join(MODEL_PATH, 'checkpoints')
 LATENT_CODES_FILENAME = os.path.join(MODEL_PATH, "sdf_net_latent_codes.to")
 LATENT_CODE_SIZE = 128
 
+
 class Lambda(nn.Module):
     def __init__(self, function):
         super(Lambda, self).__init__()
@@ -16,6 +17,7 @@ class Lambda(nn.Module):
 
     def forward(self, x):
         return self.function(x)
+
 
 class SavableModule(nn.Module):
     def __init__(self, filename):
@@ -33,10 +35,10 @@ class SavableModule(nn.Module):
             filename = '.'.join(filename)
             return os.path.join(CHECKPOINT_PATH, filename)
 
-
     def load(self, epoch=None):
-        self.load_state_dict(torch.load(self.get_filename(epoch=epoch)), strict=False)
-    
+        self.load_state_dict(torch.load(
+            self.get_filename(epoch=epoch)), strict=False)
+
     def save(self, epoch=None):
         if epoch is not None and not os.path.exists(CHECKPOINT_PATH):
             os.mkdir(CHECKPOINT_PATH)

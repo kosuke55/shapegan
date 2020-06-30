@@ -16,14 +16,14 @@ TRANSITION_FRAMES = 60
 ROTATE_MODEL = False
 USE_HYBRID_GAN = True
 
-SURFACE_LEVEL = 0.04 if USE_HYBRID_GAN else 0.011
+SURFACE_LEVEL = 0.1 if USE_HYBRID_GAN else 0.011
 
 sdf_net = SDFNet()
 if USE_HYBRID_GAN:
-    # sdf_net.filename = 'hybrid_progressive_gan_generator_3.to'
+    sdf_net.filename = 'mugs_hybrid_progressive_gan_generator_3.to'
     # sdf_net.filename = 'gan_generator_voxels_sofas.to'
     # sdf_net.filename = 'gan_generator_voxels_airplanes.to'
-    sdf_net.filename = 'gan_generator_voxels_chairs.to'
+    # sdf_net.filename = 'gan_generator_voxels_chairs.to'
 sdf_net.load()
 sdf_net.eval()
 
@@ -95,9 +95,10 @@ def create_objects():
     from rendering.raymarching import render_image
     from rendering.math import get_rotation_matrix
     import os
-    ensure_directory('generated_objects/')
-    image_filename = 'generated_objects/chair-{:03d}.png'
-    mesh_filename = 'generated_objects/chair-{:03d}.stl'
+    ensure_directory(
+        '/media/kosuke/SANDISK/ShapeNetCore.v2/gan/data/generated_objects/mugs')
+    image_filename = '/media/kosuke/SANDISK/ShapeNetCore.v2/gan/data/generated_objects/mugs-{:03d}.png'
+    mesh_filename = '/media/kosuke/SANDISK/ShapeNetCore.v2/gan/data/generated_objects/mugs-{:03d}.stl'
     index = 0
     while True:
         if os.path.exists(image_filename.format(index)) or os.path.exists(mesh_filename.format(index)):
