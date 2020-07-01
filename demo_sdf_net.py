@@ -16,11 +16,12 @@ TRANSITION_FRAMES = 60
 ROTATE_MODEL = False
 USE_HYBRID_GAN = True
 
-SURFACE_LEVEL = 0.1 if USE_HYBRID_GAN else 0.011
+SURFACE_LEVEL = 0.04 if USE_HYBRID_GAN else 0.011
 
 sdf_net = SDFNet()
 if USE_HYBRID_GAN:
-    sdf_net.filename = 'mugs_hybrid_progressive_gan_generator_3.to'
+    sdf_net.filename = 'ycb0_6000.to'
+    # sdf_net.filename = 'mugs_hybrid_progressive_gan_generator_3.to'
     # sdf_net.filename = 'gan_generator_voxels_sofas.to'
     # sdf_net.filename = 'gan_generator_voxels_airplanes.to'
     # sdf_net.filename = 'gan_generator_voxels_chairs.to'
@@ -110,7 +111,7 @@ def create_objects():
                              SURFACE_LEVEL, ssaa=2, radius=1.4, color=(0.7, 0.7, 0.7))
         image.save(image_filename.format(index))
         mesh = sdf_net.get_mesh(
-            latent_code, voxel_resolution=256, sphere_only=False, level=SURFACE_LEVEL)
+            latent_code, voxel_resolution=32, sphere_only=False, level=SURFACE_LEVEL)
         mesh.apply_transform(get_rotation_matrix(90, 'x'))
         mesh.apply_translation((0, 0, -np.min(mesh.vertices[:, 2])))
         mesh.export(mesh_filename.format(index))

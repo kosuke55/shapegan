@@ -12,6 +12,8 @@ from sklearn.manifold import TSNE
 from matplotlib.offsetbox import Bbox
 from sklearn.cluster import KMeans
 
+import ipdb  # noqa
+
 try:
     import cv2
 except ImportError:
@@ -23,10 +25,12 @@ except ImportError:
             sys.path.append(path)
             break
 
-SAMPLE_COUNT = 30  # Number of distinct objects to generate and interpolate between
+SAMPLE_COUNT = 10  # Number of distinct objects to generate and interpolate between
 TRANSITION_FRAMES = 60
+NUM_SAMPLES = 10
 
 USE_VAE = False
+USE_HYBRID_GAN = True
 
 SURFACE_LEVEL = 0.011
 
@@ -56,25 +60,62 @@ if USE_VAE:
             latent_codes[position:position + batch.shape[0],
                          :] = vae.encode(batch.to(device)).detach().cpu()
     latent_codes = latent_codes.numpy()
+
+elif USE_HYBRID_GAN:
+    from util import create_text_slice, device, standard_normal_distribution, get_voxel_coordinates
+    from model.progressive_gan import LATENT_CODE_SIZE  # LATENT_CODE_SIZE = 128  # noqa
+    from datasets import VoxelDataset
+    from torch.utils.data import DataLoader
+    from model.sdf_net import SDFNet
+
+    VOXEL_RESOLUTION = 8
+
+    def sample_latent_codes(num_samples):
+        latent_codes = standard_normal_distribution.sample(
+            sample_shape=[num_samples, LATENT_CODE_SIZE]).to(device)
+        # print(latent_codes.shape)
+        return latent_codes
+
+    sdf_net = SDFNet()
+    sdf_net.filename = 'gan_generator_voxels_sofas.to'
+    # sdf_net.filename = 'ycb0_6000.to'
+    sdf_net.load()
+    sdf_net.eval()
+
+    latent_codes = sample_latent_codes(NUM_SAMPLES)
+    print(latent_codes.shape)
+
+    latent_codes = latent_codes.cpu().detach().numpy()
+    print(latent_codes.shape)
+    # import ipdb
+    # ipdb.set_trace()
+# latent_codes = torch.load(LATENT_CODES_FILENAME).detach().cpu().numpy()
+
 else:
     from model.sdf_net import SDFNet, LATENT_CODES_FILENAME
     latent_codes = torch.load(LATENT_CODES_FILENAME).detach().cpu().numpy()
-
+    print(latent_codes.shape)
     sdf_net = SDFNet()
     sdf_net.load()
     sdf_net.eval()
 
-raise NotImplementedError('A labels tensor needs to be supplied here.')
-labels = None
+# raise NotImplementedError('A labels tensor needs to be supplied here.')
+# labels = None
+labels = np.random.randint(1, size=NUM_SAMPLES)
 
 print("Calculating embedding...")
 tsne = TSNE(n_components=2)
 latent_codes_embedded = tsne.fit_transform(latent_codes)
+print(latent_codes_embedded.shape)
 print("Calculating clusters...")
 kmeans = KMeans(n_clusters=SAMPLE_COUNT)
 
+
 indices = np.zeros(SAMPLE_COUNT, dtype=int)
 kmeans_clusters = kmeans.fit_predict(latent_codes_embedded)
+
+# ipdb.set_trace()
+
 for i in range(SAMPLE_COUNT):
     center = kmeans.cluster_centers_[i, :]
     cluster_classes = labels[kmeans_clusters == i]
@@ -225,7 +266,10 @@ def render_frame(frame_index):
             viewer.set_voxels(vae.decode(frame_latent_codes[frame_index, :]))
         else:
             viewer.set_mesh(sdf_net.get_mesh(
-                frame_latent_codes[frame_index, :], voxel_resolution=128, sphere_only=True, level=SURFACE_LEVEL))
+                frame_latent_codes[frame_index, :],
+                voxel_resolution=VOXEL_RESOLUTION, sphere_only=True,
+                level=SURFACE_LEVEL))
+            # frame_latent_codes[frame_index, :], voxel_resolution=128, sphere_only=True, level=SURFACE_LEVEL))
     image_mesh = viewer.get_image(flip_red_blue=True)
 
     create_plot(frame_index)
