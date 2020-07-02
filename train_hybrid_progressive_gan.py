@@ -34,7 +34,13 @@ ITERATION = int(get_parameter('iteration', 0))
 CONTINUE = "continue" in sys.argv
 
 FADE_IN_EPOCHS = 10
-BATCH_SIZE = 16
+BATCH_SIZE = 64
+# BATCH_SIZE = 64 * torch.cuda.device_count()
+
+
+print('gpus', torch.cuda.device_count())
+print(device)
+
 GRADIENT_PENALTY_WEIGHT = 10
 NUMBER_OF_EPOCHS = int(get_parameter('epochs', 10000))
 
@@ -82,6 +88,9 @@ if torch.cuda.device_count() > 1:
 else:
     generator_parallel = generator
     discriminator_parallel = discriminator
+
+generator_parallel = generator
+discriminator_parallel = discriminator
 
 generator_parallel.to(device)
 discriminator_parallel.to(device)
@@ -186,7 +195,7 @@ def train():
                     if batch_index % 50 == 0 and "show_slice" in sys.argv:
                         tqdm.write(create_text_slice(
                             fake_sample[0, :, :, :] / SDF_CLIPPING))
-
+                    # fake_sample = torch.unsqueeze(fake_sample, 0)
                     fake_discriminator_output = discriminator_parallel(
                         fake_sample)
                     fake_loss = -fake_discriminator_output.mean()
@@ -202,9 +211,11 @@ def train():
                                                   VOXEL_RESOLUTION,
                                                   VOXEL_RESOLUTION,
                                                   VOXEL_RESOLUTION)
+                # fake_sample = torch.unsqueeze(fake_sample, 0)
                 discriminator_output_fake = discriminator_parallel(fake_sample)
 
                 # train discriminator on real samples
+                # valid_sample = torch.unsqueeze(valid_sample, 0)
                 discriminator_output_valid = discriminator_parallel(
                     valid_sample)
 
